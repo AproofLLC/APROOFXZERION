@@ -1,0 +1,22 @@
+{
+  "name": "aproof-project",
+  "private": true,
+  "type": "module",
+  "description": "Monorepo root: APROOF backend + frontend UI. Use npm run release:* for reviewer-ready source bundles.",
+  "scripts": {
+    "dev:stack": "node scripts/dev-stack-profile.mjs devnet",
+    "dev:stack:devnet": "node scripts/dev-stack-profile.mjs devnet",
+    "dev:check": "node scripts/dev-stack-check.mjs",
+    "dev:user-log-routes": "node scripts/user-log-routes-check.mjs",
+    "stop:stack": "node scripts/stop-stack.mjs",
+    "integrity": "node scripts/check-repo-integrity.mjs",
+    "harness:full": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-full-e2e-harness.ps1",
+    "verify": "npm run verify:all --prefix APROOF && npm run typecheck --prefix frontend && npm run test --prefix frontend && npm run build --prefix frontend && npm run integrity",
+    "release:preflight": "node scripts/release-project-preflight.mjs",
+    "release": "node scripts/release-project-bundle.mjs",
+    "release:pack": "npm run release:preflight && npm run release"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,17 @@
+# Example: UI + API on one browser origin (nginx proxies JSON routes to the API).
+# Local interactive dev remains: npm run dev:stack (not this file).
+services:
+  api:
+    build: ./APROOF
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+    # For Postgres: set APROOF_DB_MODE=postgres and DATABASE_URL (see APROOF/.env.example).
+
+  web:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api

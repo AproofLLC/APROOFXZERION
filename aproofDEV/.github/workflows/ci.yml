@@ -1,0 +1,33 @@
+# Enforces green main: backend verify:all + frontend typecheck + build + sandbox template parity.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            APROOF/package-lock.json
+            frontend/package-lock.json
+
+      - name: Backend — install & verify
+        working-directory: APROOF
+        run: npm ci && npm run verify:all
+
+      - name: Frontend — install, typecheck, test, build
+        working-directory: frontend
+        run: npm ci && npm run typecheck && npm run test && npm run build
+
+      - name: Sandbox scenario id parity (frontend vs APROOF)
+        working-directory: .
+        run: node scripts/check-sandbox-parity.mjs

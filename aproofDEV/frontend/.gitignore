@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+tmp/
+.vite/
+*.log
+# Local env — untracked overlays are normal; do not commit real secrets.
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db

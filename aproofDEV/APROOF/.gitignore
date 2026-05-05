@@ -1,0 +1,29 @@
+node_modules/
+dist/
+coverage/
+data/
+tmp/
+.local/
+logs/
+.vite/
+
+# Local secrets — never commit; preflight checks git-tracked files only (see root README).
+.env
+.env.*
+!.env.example
+*.keypair.json
+anchor-devnet.json
+wallets/
+secrets/
+
+*.log
+**/*.log
+*.tmp
+
+# Deprecated backup trees (use frontend/src, not copies)
+../_fe_api_hooks_backup/
+*.sqlite
+*.db
+
+.DS_Store
+Thumbs.db

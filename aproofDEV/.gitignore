@@ -1,0 +1,33 @@
+# Build / artifacts
+**/dist/
+**/build/
+**/coverage/
+**/tmp/
+**/node_modules/
+**/.vite/
+.local/
+APROOF/.local/
+*.log
+*.tmp
+logs/
+data/
+
+# Local env (untracked OK — release:preflight fails only on git-tracked secrets; see README)
+.env
+.env.*
+!.env.example
+*.keypair.json
+anchor-devnet.json
+wallets/
+secrets/
+
+# Local DB / cache (if created at repo root)
+*.sqlite
+*.sqlite-journal
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Deprecated / backup — not source of truth
+_fe_api_hooks_backup/
