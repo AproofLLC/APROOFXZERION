@@ -64,6 +64,8 @@ export type ProcessEventSuccess = {
   event_id: string;
   canonical_event_type: string;
   subject_rail: RailType;
+  /** Subject `external_key` when present (e.g. `zerion-agent` for Zerion Agent demo baselines). */
+  subject_external_key: string | null;
   proof_units: PipelineProofUnit[];
   failure_locators_created: number;
   lineage_anomaly: "OUT_OF_ORDER_LINEAGE_VERSION" | null;
@@ -194,6 +196,7 @@ export async function processEvent(db: Db, body: PostEventBody): Promise<Process
     const rail = subject.railType as RailType;
     const baselineByAngle = deriveAllAngleBaselines({
       subjectType: rail,
+      subjectExternalKey: subject.externalKey ?? null,
       canonicalEvent: { payload: (body.payload ?? {}) as Record<string, unknown>, trace_id: body.trace_id },
     });
     const proofOut: PipelineProofUnit[] = [];
@@ -364,6 +367,7 @@ export async function processEvent(db: Db, body: PostEventBody): Promise<Process
       event_id: eventId,
       canonical_event_type: normalizedEventType,
       subject_rail: subject.railType as RailType,
+      subject_external_key: subject.externalKey ?? null,
       proof_units: proofOut,
       failure_locators_created: failureLocatorsCreated,
       lineage_anomaly: lineageAnomaly,
@@ -485,7 +489,8 @@ function evaluateIdentityAccessAngle(
   };
 }
 
-function evaluateOperationalAngle(
+/** Exported for unit tests: Zerion CLI success path must not stay `conformant` without a real `tx_hash`. */
+export function evaluateOperationalAngle(
   def: Record<string, unknown>,
   payload: Record<string, unknown>,
 ): AngleEvalResult {
@@ -527,6 +532,40 @@ function evaluateOperationalAngle(
       evidenceJson = { summary: evalResult.summary, evidence_refs: evalResult.evidence_refs };
       expectedJson = { expected_status: expectedStatus, max_latency_ms: maxLatencyMs, require_no_runtime_error: requireNoRuntimeError };
       observedJson = { execution_status: executionStatus, latency_ms: latencyMs, runtime_error: runtimeError };
+
+      const zerion = payload.zerion;
+      if (status === "conformant" && executionStatus === "success" && zerion && typeof zerion === "object") {
+        const z = zerion as Record<string, unknown>;
+        const src = typeof z.execution_source === "string" ? z.execution_source.trim() : "";
+        if (src === "zerion_cli" || src === "zerion_cli_stub") {
+          if (z.cli_invoked !== true || z.execution_attempted !== true) {
+            status = "violated";
+            deltaCode = "ZERION_EXECUTION_ATTESTATION_INCOMPLETE";
+            evidenceJson = {
+              summary:
+                "Operational integrity requires Zerion CLI invocation and execution_attempted=true alongside a declared zerion_cli execution source.",
+              evidence_refs: [],
+            };
+          } else {
+            const th = z.tx_hash;
+            const tx =
+              typeof th === "string" && th.trim().length >= 32
+                ? th.trim()
+                : typeof th === "string" && th.trim().toLowerCase() === "null"
+                  ? ""
+                  : "";
+            if (!tx) {
+              status = "violated";
+              deltaCode = "ZERION_TX_HASH_MISSING";
+              evidenceJson = {
+                summary:
+                  "Operational integrity requires a Solana devnet transaction signature when Zerion CLI was invoked with a declared execution source.",
+                evidence_refs: [],
+              };
+            }
+          }
+        }
+      }
     }
   }
 

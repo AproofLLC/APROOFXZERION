@@ -4,18 +4,18 @@
 
 | Process | Port | Role |
 |--------|------|------|
-| APROOF API (`npm run dev` in `APROOF/`) | **3000** (default; override with `PORT` / `APROOF_PORT`) | JSON API only — does **not** serve the React SPA. |
+| APROOF API (`npm run dev` in `APROOF/`) | **3040** (default; override with `PORT` / `APROOF_PORT`) | JSON API only — does **not** serve the React SPA. |
 | `npm run dev:live` (live PGlite harness) | **3101** | Same API as above; fresh `data/live-test-run-fresh` + `npm run test:live`. |
-| Vite dev (`npm run dev` in `frontend/`) | **5173** | React app + dev proxy to the API (`VITE_API_PROXY_TARGET` or `APROOF_PORT` / default **3000** — not shell `PORT`). |
-| `vite preview` | **4173** | Production build preview + same API proxy. |
+| Vite dev (`npm run dev` in `frontend/`) | **5273** | React app + dev proxy to the API (`VITE_API_PROXY_TARGET` or `APROOF_PORT` / default **3040** — not shell `PORT`). |
+| `vite preview` | **4273** | Production build preview + same API proxy. |
 
-Treat the backend as **API-only** in development. Do not expect `http://localhost:3000` to render the product UI.
+Treat the backend as **API-only** in development. Do not expect `http://localhost:3040` to render the product UI.
 
 ## Proof dashboard URL
 
-The product shell lives at **`/app/proofs`** on the **frontend** origin (e.g. `http://localhost:5173/app/proofs`).
+The product shell lives at **`/app/proofs`** on the **frontend** origin (e.g. `http://localhost:5273/app/proofs`).
 
-- Open the dashboard from the **Vite** URL, not from port 3000.
+- Open the dashboard from the **Vite** URL, not from port 3040.
 - Legacy path **`/proofs`** in the SPA redirects to **`/app/proofs`** so the browser path does not collide with the API prefix `GET /proofs/:id`.
 
 ## Production / reverse proxy

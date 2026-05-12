@@ -201,7 +201,7 @@ function main() {
   }
 
   console.log(
-    "[integrity] NOTE — Vite default proxy uses APROOF_PORT (not PORT); backend listen uses PORT → APROOF_PORT → 3000.",
+    "[integrity] NOTE — Vite proxy target: VITE_API_PROXY_TARGET, else VITE_API_PORT, else APROOF_PORT, else 3040 (not shell PORT). Backend listen: PORT → APROOF_PORT → 3040.",
   );
   console.log("          dev:stack sets VITE_API_PROXY_TARGET explicitly to avoid mismatch.");
   console.log("[integrity] PASS — all automated consistency checks");

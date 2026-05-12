@@ -15,6 +15,7 @@ import {
   waitForHealthy,
   APP_PROOFS_URL,
   resolveBackendPort,
+  DEFAULT_VITE_DEV_PORT,
 } from "./stack-health.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -64,7 +65,7 @@ function onFatal(message, hint) {
 async function main() {
   const apiPort = resolveBackendPort(process.env);
   console.log(
-    `\n  Interactive stack — backend :${apiPort} + Vite :5173 (browser uses Vite proxy only; do not open the API port directly in the browser).\n`,
+    `\n  Interactive stack — backend :${apiPort} + Vite :${DEFAULT_VITE_DEV_PORT} (browser uses Vite proxy only; do not open the API port directly in the browser).\n`,
   );
 
   apiChild = spawnNpmDev(aproofDir, "api");
@@ -110,7 +111,10 @@ async function main() {
   });
   if (!w2.ok || !w2.last?.ok) {
     console.log("  Frontend:  FAIL");
-    onFatal("Vite did not become reachable on :5173 within the timeout.", "Check frontend/vite logs above.");
+    onFatal(
+      `Vite did not become reachable on :${DEFAULT_VITE_DEV_PORT} within the timeout.`,
+      "Check frontend/vite logs above.",
+    );
   }
   console.log("  Frontend:  OK");
 

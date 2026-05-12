@@ -4,7 +4,7 @@
  * (session, integration status, overview, mappings) so no stale state survives
  * across this page and the rest of the product shell.
  */
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { apiFetch, resolveRequestUrl } from "../../../api/client";
@@ -45,6 +45,131 @@ function shellDoubleQuotedPayload(json: string): string {
   return json.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
+function ZerionAgentDemoIntegrationPanel() {
+  const sessionQ = useSession();
+  const q = useQuery({
+    queryKey: ["sandbox", "zerion-readiness"],
+    queryFn: () =>
+      apiFetch<{
+        ok: boolean;
+        execution_ready: boolean;
+        anchor_ready: boolean;
+        anchor_balance_ready: boolean;
+        integration_ready: boolean;
+        missing: string[];
+        missing_env?: string[];
+        zerion_api_key_present: boolean;
+        zerion_cli_path_present: boolean;
+        zerion_cli_path_exists: boolean;
+        zerion_cli_path_is_file: boolean;
+        zerion_wallet_address_present: boolean;
+        solana_rpc_url_present: boolean;
+        solana_keypair_path_present: boolean;
+        solana_keypair_path_exists: boolean;
+        solana_keypair_path_is_file: boolean;
+        solana_balance_lamports: number | null;
+        solana_balance_sol: number | null;
+        wallet_public_address: string | null;
+        allowed_chain: string;
+        max_spend_usd: number;
+        approved_assets: string[];
+        aproof_subject_id: string;
+        aproof_env: string;
+      }>("/sandbox/zerion-readiness"),
+    enabled: sessionQ.data?.environment_mode === "testnet",
+    staleTime: 10_000,
+    retry: 1,
+  });
+
+  return (
+    <SettingsSection
+      id="zerion-agent"
+      title="Zerion Agent integration"
+      description="Server-side environment for forked Zerion CLI, Zerion API routing, and Solana devnet execution. Secrets are
+      never shown—only presence checks. Scenario 1 records a conformant proof only after a real CLI return with a transaction
+      signature when integration is ready."
+    >
+      <div className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-3 text-xs">
+        {q.isLoading ? (
+          <LoadingState message="Loading integration readiness…" />
+        ) : q.isError ? (
+          <p className="text-sm text-destructive">{(q.error as Error).message}</p>
+        ) : q.data ? (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={q.data.integration_ready ? "default" : "secondary"}>
+                {q.data.integration_ready ? "Integration ready" : "Integration not ready"}
+              </Badge>
+            </div>
+            {!q.data.integration_ready ? (
+              <p className="text-sm text-foreground leading-relaxed border border-border rounded-lg p-3 bg-muted/20">
+                Zerion execution and Solana devnet anchoring are not ready. Configure Zerion API key, CLI path, wallet
+                address, Solana RPC, and Solana keypair path to enable real execution and anchoring.
+              </p>
+            ) : null}
+            <ul className="text-muted-foreground space-y-1 text-[11px] font-mono">
+              <li>execution_ready: {q.data.execution_ready ? "yes" : "no"}</li>
+              <li>anchor_ready: {q.data.anchor_ready ? "yes" : "no"}</li>
+              <li>anchor_balance_ready: {q.data.anchor_balance_ready ? "yes" : "no"}</li>
+              <li>integration_ready: {q.data.integration_ready ? "yes" : "no"}</li>
+              <li>ZERION_API_KEY: {q.data.zerion_api_key_present ? "present" : "missing"}</li>
+              <li>
+                ZERION_CLI_PATH: {q.data.zerion_cli_path_present ? "present" : "missing"}
+                {q.data.zerion_cli_path_present
+                  ? ` · on disk: ${q.data.zerion_cli_path_exists ? "yes" : "no"} · file: ${q.data.zerion_cli_path_is_file ? "yes" : "no"}`
+                  : null}
+              </li>
+              <li>ZERION_AGENT_WALLET_ADDRESS: {q.data.zerion_wallet_address_present ? "present" : "missing"}</li>
+              <li>SOLANA_RPC_URL: {q.data.solana_rpc_url_present ? "present" : "missing"}</li>
+              <li>
+                SOLANA_KEYPAIR_PATH: {q.data.solana_keypair_path_present ? "present" : "missing"}
+                {q.data.solana_keypair_path_present
+                  ? ` · on disk: ${q.data.solana_keypair_path_exists ? "yes" : "no"} · file: ${q.data.solana_keypair_path_is_file ? "yes" : "no"}`
+                  : null}
+              </li>
+              {q.data.wallet_public_address ? (
+                <li>Anchor wallet (public): {q.data.wallet_public_address}</li>
+              ) : null}
+              {q.data.solana_balance_lamports != null ? (
+                <li>
+                  Devnet balance: {q.data.solana_balance_lamports} lamports
+                  {q.data.solana_balance_sol != null ? ` (${q.data.solana_balance_sol} SOL)` : null}
+                </li>
+              ) : null}
+              {!q.data.anchor_balance_ready && q.data.anchor_ready ? (
+                <li className="text-foreground/90">
+                  Devnet SOL balance is below the minimum. Run{" "}
+                  <span className="font-mono">npm run devnet:wallet:bootstrap</span> from the APROOF package (or fund the
+                  public address manually), then reload readiness.
+                </li>
+              ) : null}
+            </ul>
+            <p className="text-muted-foreground leading-relaxed">
+              Optional on the API host: <span className="font-mono">ZERION_ALLOWED_CHAIN</span>,{" "}
+              <span className="font-mono">ZERION_MAX_SPEND_USD</span>,{" "}
+              <span className="font-mono">ZERION_APPROVED_ASSETS</span>,{" "}
+              <span className="font-mono">ANCHOR_MODE</span>, <span className="font-mono">APROOF_SUBJECT_ID</span>,{" "}
+              <span className="font-mono">APROOF_ENV</span>, <span className="font-mono">SOLANA_MIN_BALANCE_LAMPORTS</span>.
+            </p>
+            {(q.data.missing?.length ?? q.data.missing_env?.length ?? 0) > 0 ? (
+              <p className="font-mono text-[11px] text-muted-foreground">
+                Missing: {(q.data.missing ?? q.data.missing_env ?? []).join(", ")}
+              </p>
+            ) : null}
+            <p className="text-muted-foreground">
+              Allowed chain <span className="font-mono">{q.data.allowed_chain}</span> · max spend USD{" "}
+              <span className="font-mono">{q.data.max_spend_usd}</span> · approved assets{" "}
+              <span className="font-mono">{q.data.approved_assets.join(", ")}</span> · AProof subject{" "}
+              <span className="font-mono">{q.data.aproof_subject_id}</span> · AProof env{" "}
+              <span className="font-mono">{q.data.aproof_env}</span>
+            </p>
+          </>
+        ) : null}
+      </div>
+    </SettingsSection>
+  );
+}
+
 function EventIngestionExample({ subjectId }: { subjectId: string }) {
   const sessionQ = useSession();
 
@@ -57,7 +182,7 @@ function EventIngestionExample({ subjectId }: { subjectId: string }) {
       ? `${apiBase}/events`
       : typeof window !== "undefined"
         ? `${window.location.origin}/events`
-        : "http://127.0.0.1:5173/events";
+        : "http://127.0.0.1:5273/events";
     const displayBase = apiBase || (typeof window !== "undefined" ? window.location.origin : "");
     const body = {
       organization_id: session.organization_id,
@@ -232,6 +357,8 @@ export function ProofsSettings({ subjectId }: { subjectId: string }) {
       </div>
 
       <IntegrationStatusStrip s={intQ.data} loading={intQ.isLoading} />
+
+      {sessionQ.data?.environment_mode === "testnet" ? <ZerionAgentDemoIntegrationPanel /> : null}
 
       <SettingsSection
         id="ingest"

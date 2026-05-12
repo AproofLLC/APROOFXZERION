@@ -1,6 +1,11 @@
 /// <reference path="../vitest-test-globals.d.ts" />
 import { describe, expect, it } from "vitest";
-import { BASELINE_ANGLES, deriveAllAngleBaselines, normalizeSubjectType } from "./baseline-registry.js";
+import {
+  BASELINE_ANGLES,
+  deriveAllAngleBaselines,
+  normalizeSubjectType,
+  ZERION_AGENT_LOGICAL_KEY,
+} from "./baseline-registry.js";
 
 const SUBJECTS = ["llm", "model", "agent", "service", "system", "endpoint"] as const;
 
@@ -50,6 +55,38 @@ describe("baseline registry", () => {
         expect(out[angle].baseline_version).toBe("v1");
         expect(out[angle].derivation_trace.length).toBeGreaterThan(0);
       }
+    }
+  });
+
+  it("uses Zerion Agent lifecycle field paths when subject external key is zerion-agent", () => {
+    const payload = {
+      policy: { tags: ["allow_read"], policy_result: "approved" },
+      identity_access: { principal_id: "p1", scopes: ["read:proofs"] },
+      operational: { execution_status: "success", latency_ms: 10, runtime_error: null },
+      model_identity: { observed_model: "gpt-4.1-mini" },
+      deterministic: { observed_digest: "agent-digest-v1" },
+      correlation_id: "c1",
+      cross_system: { observed_systems: ["zerion_cli_fork", "zerion_api", "solana_devnet", "aproof_ingest"] },
+      zerion: {
+        chain: "solana-devnet",
+        allowed_chain: "solana-devnet",
+        amount_usd: 1,
+        max_spend_usd: 5,
+        approved_assets: ["SOL", "USDC"],
+        wallet_address: "W1",
+        execution_attempted: true,
+        cli_invoked: true,
+        execution_source: "zerion_cli",
+        tx_hash: "a".repeat(64),
+      },
+    };
+    const out = deriveAllAngleBaselines({
+      subjectType: "agent",
+      subjectExternalKey: ZERION_AGENT_LOGICAL_KEY,
+      canonicalEvent: { payload, trace_id: "t1" },
+    });
+    for (const angle of BASELINE_ANGLES) {
+      expect(out[angle].baseline_present).toBe(true);
     }
   });
 

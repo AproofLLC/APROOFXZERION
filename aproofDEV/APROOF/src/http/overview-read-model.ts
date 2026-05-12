@@ -14,11 +14,13 @@ import {
   proofUnits,
   subjects,
 } from "../db/schema/index.js";
+import { ZERION_AGENT_LOGICAL_KEY } from "../baselines/baseline-registry.js";
 import { PRODUCT_ANGLE_NAMES } from "../product/product-proof.js";
 import type { SubjectCoreBlock } from "./subject-contract.js";
 import { buildSubjectCoreBlock } from "./subject-assembler.js";
 import { enrichSubjectTimestamps } from "./subject-service.js";
 import { normalizeAnchorMetadata, type CanonicalAnchorMetadata } from "./anchor-metadata-normalizer.js";
+import { zerionExecutionExplorerUrlFromTxHash } from "../zerion/zerion-execution-explorer-url.js";
 
 export type SubjectOverview = {
   subject_header: SubjectCoreBlock;
@@ -48,6 +50,10 @@ export type SubjectOverview = {
     flags: number;
     delta_detected: boolean;
     anchor_status: string | null;
+    /** Latest canonical event `payload.zerion.tx_hash` when present (public chain signature only). */
+    zerion_tx_hash: string | null;
+    /** Explorer URL for `zerion_tx_hash` (Zerion execution), not the AProof anchor transaction. */
+    zerion_execution_explorer_url: string | null;
   };
   angles_summary: Array<{
     angle: string;
@@ -201,7 +207,7 @@ async function assembleSubjectOverview(
   const proofEventCount = safeCount(proofEventCountRow?.c);
 
   const [latestEvent] = await db
-    .select({ eventId: canonicalEvents.eventId })
+    .select({ eventId: canonicalEvents.eventId, payload: canonicalEvents.payload })
     .from(canonicalEvents)
     .where(
       and(eq(canonicalEvents.subjectId, subjectId), eq(canonicalEvents.proofability, "proofable")),
@@ -238,13 +244,16 @@ async function assembleSubjectOverview(
       const hasViolated = list.some((p) => p.status === "violated");
       const hasFlagged = list.some((p) => p.status === "flagged");
       const hasConformant = list.some((p) => p.status === "conformant");
-      const aggStatus = hasViolated
+      const hasAnchorFailure = list.some((p) => p.anchorState === "failed");
+      const angleAgg = hasViolated
         ? "violated"
         : hasFlagged
           ? "flagged"
           : hasConformant
             ? "conformant"
             : "unverifiable";
+      const aggStatus =
+        angleAgg === "conformant" && hasAnchorFailure ? "violated" : angleAgg;
       const primary =
         list.find((p) => p.status === "violated") ??
         list.find((p) => p.status === "flagged") ??
@@ -389,6 +398,41 @@ async function assembleSubjectOverview(
     ? (latestAnchor.status === "confirmed" ? "anchored" : latestAnchor.status === "failed" ? "anchor_failed" : "pending")
     : "not_anchored";
 
+  let latestZerionTxHash: string | null = null;
+  if (latestEvent?.payload && typeof latestEvent.payload === "object") {
+    const pl = latestEvent.payload as Record<string, unknown>;
+    const z = pl.zerion;
+    if (z && typeof z === "object") {
+      const th = (z as Record<string, unknown>).tx_hash;
+      if (typeof th === "string") {
+        const t = th.trim();
+        latestZerionTxHash = t.length >= 32 ? t : null;
+      }
+    }
+  }
+
+  const extKey = typeof params.subRow.externalKey === "string" ? params.subRow.externalKey.trim() : "";
+  let latestSnapshotStatus = latestProof?.status ?? null;
+  if (
+    extKey === ZERION_AGENT_LOGICAL_KEY &&
+    latestSnapshotStatus === "conformant" &&
+    !latestZerionTxHash &&
+    latestEvent?.payload &&
+    typeof latestEvent.payload === "object"
+  ) {
+    const pl = latestEvent.payload as Record<string, unknown>;
+    const corr = typeof pl.correlation_id === "string" ? pl.correlation_id : "";
+    const pol = pl.policy && typeof pl.policy === "object" ? (pl.policy as Record<string, unknown>) : {};
+    const policyResult = String(pol.policy_result ?? "").toLowerCase();
+    const skip =
+      corr === "corr-zerion-agent-demo-v2" ||
+      corr === "corr-zerion-agent-blocked" ||
+      policyResult === "denied";
+    if (!skip) {
+      latestSnapshotStatus = "violated";
+    }
+  }
+
   return {
     subject_header: buildSubjectCoreBlock(params.subRow, ts, params.environmentName),
     metadata: {},
@@ -400,7 +444,7 @@ async function assembleSubjectOverview(
     failure_count: activeFailures,
     anchor_status: anchorStatus,
     latest_proof: latestProof?.proofId ?? null,
-    latest_proof_status: latestProof?.status ?? null,
+    latest_proof_status: latestSnapshotStatus,
     baselines_summary: baselinesSummary,
     status_strip: {
       total_events: totalEvents,
@@ -435,10 +479,12 @@ async function assembleSubjectOverview(
     },
     latest_proof_snapshot: {
       proof_id: latestProof?.proofId ?? null,
-      status: latestProof?.status ?? null,
+      status: latestSnapshotStatus,
       flags: flagsCount,
       delta_detected: Boolean(latestProof?.deltaCode && String(latestProof.deltaCode).length > 0),
       anchor_status: latestProof?.anchorState ?? null,
+      zerion_tx_hash: latestZerionTxHash,
+      zerion_execution_explorer_url: zerionExecutionExplorerUrlFromTxHash(latestZerionTxHash),
     },
     angles_summary: Array.isArray(anglesSummary) ? anglesSummary : defaultAnglesSummary(),
     recent_events: recentEvents,

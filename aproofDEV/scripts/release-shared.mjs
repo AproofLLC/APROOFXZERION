@@ -34,6 +34,7 @@ export const ROOT_DENY_NAMES = new Set([
 /** True if this file must never appear in a release artifact. `.env.example` is allowed. */
 export function isForbiddenEnvBaseName(name) {
   if (name === ".env.example") return false;
+  if (name === ".env.demo.example") return false;
   if (name === ".env") return true;
   if (name.startsWith(".env.")) return true;
   return false;

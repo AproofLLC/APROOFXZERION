@@ -36,6 +36,7 @@ export function useSandboxSession() {
       qc.removeQueries({ queryKey: ["failure"] });
       qc.removeQueries({ queryKey: ["lineage"] });
       qc.removeQueries({ queryKey: ["demo-state"] });
+      qc.removeQueries({ queryKey: ["sandbox", "zerion-readiness"] });
       qc.removeQueries({ queryKey: ["subject-user-log-summary"] });
       qc.removeQueries({ queryKey: ["subject-user-logs"] });
       await qc.invalidateQueries({ queryKey: ["session"] });

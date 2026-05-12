@@ -10,10 +10,13 @@
 | [APROOF-BASELINE-TEMPLATES.md](./APROOF-BASELINE-TEMPLATES.md) | Onboarding, solutions | Universal template structure + practical templates |
 | [APROOF-DISCLOSURE-AND-VIEWS.md](./APROOF-DISCLOSURE-AND-VIEWS.md) | Security, integrations | `internal` / `external` / `minimal` / `adversarial_safe` |
 | [APROOF-API-OVERVIEW.md](./APROOF-API-OVERVIEW.md) | Integrators | HTTP API summary; full contract in [API-FREEZE.md](./API-FREEZE.md) |
-| [INTEGRATION.md](./INTEGRATION.md) | Local dev + deploy | API-only backend (3000), Vite UI (5173), `/app/proofs` dashboard path |
+| [INTEGRATION.md](./INTEGRATION.md) | Local dev + deploy | API-only backend (3040), Vite UI (5273), `/app/proofs` dashboard path |
 | [DEV-DB-RESET.md](./DEV-DB-RESET.md) | Local dev | **`58P01`** / missing `base/...` = bad PGlite files; default dev is PGlite; recovery: `dev:db:reset` → `dev:verify:routes` → `dev` |
 | [LOCAL-VERIFICATION-AND-STRESS.md](./LOCAL-VERIFICATION-AND-STRESS.md) | QA / ops | Boot order, `verify:package`, `verify:all`, `test:e2e`, `stress:inject`, `stress:api` |
 | [VERIFICATION-REPORT.md](./VERIFICATION-REPORT.md) | QA / ops | Snapshot of last recorded pass (update when re-verifying) |
+| [environment-hardening.md](./environment-hardening.md) | Dev / security | `.env` load order, secret hygiene, Zerion + Solana env checklist |
+| [zerion-agent-live-demo.md](./zerion-agent-live-demo.md) | Demos / judges | Live devnet walkthrough, wallet separation, troubleshooting |
+| [hardwire-local-zerion-agent.md](./hardwire-local-zerion-agent.md) | Integrators | Forked Zerion CLI contract + local executor option |
 | [APROOF-COMMUNICATIONS.md](./APROOF-COMMUNICATIONS.md) | GTM, pilots | Positioning lines, onboarding, subjects, pilot & demo messaging |
 
 ## Protocol & implementation (strict / reference)
@@ -58,7 +61,7 @@ Run **from the `APROOF` directory** (Windows PowerShell). This is the single sup
 |----------|------|
 | `PORT` | Listen port (first choice) |
 | `APROOF_PORT` | Listen port if `PORT` unset/empty |
-| *(default)* | `3000` |
+| *(default)* | `3040` |
 | `PGLITE_DATA_DIR` | PGlite data directory (first choice); same resolution as `getResolvedPgliteDataDirectory` in `src/db/pglite.ts` |
 | `APROOF_PGLITE_DATA_DIR` | PGlite dir if `PGLITE_DATA_DIR` unset |
 | *(default)* | `data/pglite` under current working directory (absolute-resolved at runtime) |

@@ -40,8 +40,10 @@ export function DemoControls({
       <div>
         <h2 className="text-sm font-medium text-foreground">Demo controls</h2>
         <p className="text-xs text-muted-foreground mt-1 max-w-2xl leading-relaxed">
-          Each scenario ingests a real sandbox event. Outcomes above reflect engine proof status—not the label on the
-          button.
+          Zerion Agent uses the forked Zerion CLI for real onchain execution while AProof evaluates every proposed and
+          completed action through scoped policies, deterministic proof generation, failure localization, and Solana
+          devnet anchoring. Each scenario ingests a real sandbox event; outcomes reflect engine proof status—not the
+          button label.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -54,7 +56,7 @@ export function DemoControls({
             void runTargeted("clean_proof", "Clean proof scenario completed.", "clean_proof")
           }
         >
-          {labelFor({ mode: "targeted", demo_rail: demoRail, demo_action: "clean_proof" }, "Run Clean Proof")}
+          {labelFor({ mode: "targeted", demo_rail: demoRail, demo_action: "clean_proof" }, "Authorized Execution")}
         </Button>
         <Button
           type="button"
@@ -63,7 +65,7 @@ export function DemoControls({
           disabled={busy}
           onClick={() => void runTargeted("failure", "Failure scenario completed.", "failure")}
         >
-          {labelFor({ mode: "targeted", demo_rail: demoRail, demo_action: "failure" }, "Run Failure")}
+          {labelFor({ mode: "targeted", demo_rail: demoRail, demo_action: "failure" }, "Blocked Execution")}
         </Button>
         <Button
           type="button"
@@ -76,7 +78,7 @@ export function DemoControls({
         >
           {labelFor(
             { mode: "targeted", demo_rail: demoRail, demo_action: "version_update" },
-            "Run Version Update",
+            "Execution Continuity",
           )}
         </Button>
         <Button

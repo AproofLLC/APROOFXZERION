@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Quick guardrail: user-log + related proxy routes (requires Vite on :5173 proxying to the API port from PORT/APROOF_PORT or VITE_API_PROXY_TARGET).
+ * Quick guardrail: user-log + related proxy routes (requires Vite on :5273 proxying to the API port from PORT/APROOF_PORT or VITE_API_PROXY_TARGET).
  * Same probes as the "Proxy" step in npm run dev:check — use when debugging route registration only.
  */
 /* eslint-disable no-console */

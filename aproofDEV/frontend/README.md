@@ -6,7 +6,7 @@ React + Vite app for the proof dashboard. Proxies API calls to the backend in de
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Dev server (default port 5173) |
+| `npm run dev` | Dev server (default port 5273) |
 | `npm run build` | Typecheck + production bundle |
 | `npm run typecheck` | `tsc --noEmit` only |
 | `npm run preview` | Preview production build |
@@ -14,4 +14,4 @@ React + Vite app for the proof dashboard. Proxies API calls to the backend in de
 ## Requirements
 
 - Node ≥ 20
-- Backend running (e.g. `cd ../APROOF && npm run dev` on port 3000)
+- Backend running (e.g. `cd ../APROOF && npm run dev` on port 3040)

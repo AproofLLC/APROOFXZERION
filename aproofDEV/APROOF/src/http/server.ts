@@ -39,7 +39,7 @@ import {
   reconstructEventProofEnvelope,
 } from "./reconstruct-proof-read.js";
 import { verifyStoredProofById } from "./proof-verification-service.js";
-import { subjects } from "../db/schema/index.js";
+import { environments, subjects } from "../db/schema/index.js";
 import {
   signUp,
   signIn,
@@ -65,8 +65,7 @@ import {
 import { buildSandboxSessionSuccessBody } from "./sandbox-session-response.js";
 import { clearEnvironmentGeneratedState, deleteEnvironmentSubjectGraph } from "./sandbox-env-reset.js";
 import {
-  DEMO_SUBJECT_RAIL_ORDER,
-  demoSandboxSubjectId,
+  demoZerionAgentSubjectId,
   isDemoSandboxAction,
   isSandboxScenarioTemplate,
   runSandboxScenario,
@@ -75,11 +74,13 @@ import { applySandboxRailBaselineShapes } from "../demo/sandbox-rail-baseline-sh
 import { runSandboxAnchorCoordinatorForSubject } from "../anchor/sandbox-anchor-coordinator.js";
 import { resolveAnchorMode, resolveSolanaDevnetConfig } from "../anchor/solana-devnet-anchor.js";
 import { applyPersistedAnchorToProductProof } from "./apply-persisted-anchor-to-product-proof.js";
+import { buildZerionReadinessSnapshot } from "../zerion/zerion-readiness.js";
 import { buildSessionClearCookieHeader, buildSessionSetCookieHeader } from "./session-cookie.js";
 import {
   buildSubjectOverview,
   OverviewBuildFailedError,
 } from "./overview-read-model.js";
+import { buildZerionAgentSummary } from "./zerion-agent-summary-service.js";
 import {
   logDashboardBootExpectedDenial,
   logDashboardBootFailure,
@@ -332,7 +333,7 @@ export function buildServer(db: Db) {
       }
     }
     if (!cookieMutationCsrfAllowed(request)) {
-      // Sign-out must work when the SPA origin and API origin differ (e.g. localhost:5173 → 127.0.0.1:3000),
+      // Sign-out must work when the SPA origin and API origin differ (e.g. localhost:5273 → 127.0.0.1:3040),
       // which browsers label as cross-site. Logout CSRF is low risk compared to leaving users stuck signed in.
       if (path !== "/auth/sign-out") {
         sendCookieCsrfBlocked(reply);
@@ -346,7 +347,7 @@ export function buildServer(db: Db) {
     reply.status(200).send({
       ok: true,
       service: "aproof",
-      hint: "This URL is the API. Run the frontend (e.g. npm run dev in frontend/) on port 5173, or vite preview on 4173 with the API on 3000.",
+      hint: "This URL is the API. Run the frontend (e.g. npm run dev in frontend/) on port 5273, or vite preview on 4273 with the API on 3040.",
       health: "/health",
     }),
   );
@@ -563,6 +564,68 @@ export function buildServer(db: Db) {
       return sendInternalValidated(ProofListResponseSchema, responseBody, 200, request, reply);
     }
     return reply.status(200).send(responseBody);
+  });
+
+  /* ---- GET /subjects/:id/zerion-agent-summary (before other /subjects/:id/* to avoid any param shadowing) ---- */
+  app.get("/subjects/:id/zerion-agent-summary", async (request, reply) => {
+    const auth = await authenticateApiKeyOrSessionForProofReads(db, request, reply);
+    if (!auth) {
+      logDashboardBootExpectedDenial(request, "GET /subjects/:id/zerion-agent-summary", "unauthenticated");
+      return;
+    }
+    const id = (request.params as { id: string }).id;
+    if (!validateUuidParam(id, "id", reply)) return;
+    const inScope = await subjectExistsInScope(db, {
+      subjectId: id,
+      organizationId: auth.organizationId,
+      environmentId: auth.environmentId,
+    });
+    if (!inScope) {
+      logDashboardBootExpectedDenial(request, "GET /subjects/:id/zerion-agent-summary", "subject_not_in_scope", {
+        organization_id: auth.organizationId,
+        environment_id: auth.environmentId,
+        subject_id: id,
+      });
+      return reply.status(404).send(apiErrorEnvelope("NOT_FOUND", "Subject not found."));
+    }
+    const [envRow] = await db
+      .select({ name: environments.name })
+      .from(environments)
+      .where(eq(environments.id, auth.environmentId))
+      .limit(1);
+    const environmentName = (envRow?.name ?? "environment").trim() || "environment";
+    try {
+      const summary = await buildZerionAgentSummary(db, {
+        subjectId: id,
+        organizationId: auth.organizationId,
+        environmentId: auth.environmentId,
+        environmentName,
+      });
+      if (!summary) {
+        request.log.error(
+          { subject_id: id, organization_id: auth.organizationId },
+          "zerion_agent_summary.null_after_scope_check",
+        );
+        return reply
+          .status(500)
+          .send(apiErrorEnvelope("INTERNAL_ERROR", "Zerion agent summary could not be built for an in-scope subject."));
+      }
+      logDashboardBootSuccess(request, "GET /subjects/:id/zerion-agent-summary", {
+        organization_id: auth.organizationId,
+        environment_id: auth.environmentId,
+        subject_id: id,
+      });
+      return reply.status(200).send(summary);
+    } catch (err) {
+      logDashboardBootFailure(request, "GET /subjects/:id/zerion-agent-summary", err, {
+        organization_id: auth.organizationId,
+        environment_id: auth.environmentId,
+        subject_id: id,
+      });
+      if (!reply.sent) {
+        return reply.status(500).send(apiErrorEnvelope("INTERNAL_ERROR", "Zerion agent summary could not be built."));
+      }
+    }
   });
 
   /* ---- GET /failures ---- */
@@ -797,20 +860,6 @@ export function buildServer(db: Db) {
         return reply.status(500).send(apiErrorEnvelope("INTERNAL_ERROR", "Failed to list subjects."));
       }
     }
-  });
-
-  app.get("/subjects/:id", async (request, reply) => {
-    const session = await authenticateSession(db, request, reply);
-    if (!session) return;
-    const id = (request.params as { id: string }).id;
-    if (!validateUuidParam(id, "id", reply)) return;
-    const result = await getSubject(db, {
-      subjectId: id,
-      organizationId: session.organizationId,
-      environmentId: session.environmentId,
-    });
-    if (!result) return reply.status(404).send(apiErrorEnvelope("NOT_FOUND", "Subject not found."));
-    return reply.status(200).send(result);
   });
 
   app.get("/subjects/:id/integration-bootstrap", async (request, reply) => {
@@ -1249,6 +1298,24 @@ export function buildServer(db: Db) {
     return reply.status(201).send(detail);
   });
 
+  /**
+   * Registered after all static `GET /subjects/:id/...` paths so dynamic `:id` does not shadow
+   * nested routes (e.g. `/subjects/:id/zerion-agent-summary`).
+   */
+  app.get("/subjects/:id", async (request, reply) => {
+    const session = await authenticateSession(db, request, reply);
+    if (!session) return;
+    const id = (request.params as { id: string }).id;
+    if (!validateUuidParam(id, "id", reply)) return;
+    const result = await getSubject(db, {
+      subjectId: id,
+      organizationId: session.organizationId,
+      environmentId: session.environmentId,
+    });
+    if (!result) return reply.status(404).send(apiErrorEnvelope("NOT_FOUND", "Subject not found."));
+    return reply.status(200).send(result);
+  });
+
   /* ================================================================== */
   /* H. SETTINGS / CONTROL-PLANE LAYER                                  */
   /* ================================================================== */
@@ -1614,17 +1681,21 @@ export function buildServer(db: Db) {
               );
           }
           const railStr = typeof demoRailRaw === "string" ? demoRailRaw.trim() : "";
-          if (!railStr || !(RAIL_TYPES as readonly string[]).includes(railStr)) {
+          if (railStr.length > 0 && railStr !== "agent") {
             return reply
               .status(400)
-              .send(apiErrorEnvelope("INVALID_BODY", "demo_rail must be a valid rail type."));
+              .send(
+                apiErrorEnvelope(
+                  "INVALID_BODY",
+                  "Demo sandbox evaluates Zerion Agent only; omit demo_rail or set demo_rail to agent.",
+                ),
+              );
           }
-          const demo_rail = railStr as RailType;
           bootstrap = await runSandboxScenario(db, {
             organizationId: session.organizationId,
             environmentId: session.environmentId,
             template: "demo_all_rails",
-            targeted: { rail: demo_rail, demo_action },
+            targeted: { demo_action },
           });
         } else {
           await clearEnvironmentGeneratedState(db, {
@@ -1657,7 +1728,7 @@ export function buildServer(db: Db) {
             }
             bootstrap = {
               template,
-              primary_subject_id: subject_ids_by_rail.model ?? subjectRows[0]!.id,
+              primary_subject_id: subject_ids_by_rail.agent ?? subjectRows[0]!.id,
               subject_ids: subjectRows.map((r) => r.id),
               subject_ids_by_rail,
             };
@@ -1726,18 +1797,16 @@ export function buildServer(db: Db) {
       const subjectsByRail: Record<string, unknown> = {};
       const overviews: Record<string, unknown> = {};
 
-      for (const rail of DEMO_SUBJECT_RAIL_ORDER) {
-        const subjectId = demoSandboxSubjectId(session.environmentId, rail);
-        const overview = await buildSubjectOverview(db, {
-          subjectId,
-          organizationId: session.organizationId,
-          environmentId: session.environmentId,
-          environmentName: session.environmentName ?? env?.name ?? "sandbox",
-        });
-        if (overview) {
-          subjectsByRail[rail] = { subject_id: subjectId, rail };
-          overviews[rail] = overview;
-        }
+      const subjectId = demoZerionAgentSubjectId(session.environmentId);
+      const overview = await buildSubjectOverview(db, {
+        subjectId,
+        organizationId: session.organizationId,
+        environmentId: session.environmentId,
+        environmentName: session.environmentName ?? env?.name ?? "sandbox",
+      });
+      if (overview) {
+        subjectsByRail.agent = { subject_id: subjectId, rail: "agent" };
+        overviews.agent = overview;
       }
 
       const responseData = {
@@ -1759,6 +1828,31 @@ export function buildServer(db: Db) {
       request.log.warn({ err, sandbox: true }, "sandbox demo-state threw");
       return reply.status(500).send(apiErrorEnvelope("SANDBOX_DEMO_STATE_FAILED", "Failed to build demo state."));
     }
+  });
+
+  /* ── GET /sandbox/zerion-readiness ── env presence only (no secrets) ──── */
+
+  app.get("/sandbox/zerion-readiness", async (request, reply) => {
+    try {
+      if (!requireDevnetForSandboxDemo(reply)) return;
+      const session = await authenticateSession(db, request, reply);
+      if (!session) return;
+
+      const snap = await buildZerionReadinessSnapshot();
+      return reply.status(200).send({
+        ...snap,
+        missing_env: snap.missing,
+      });
+    } catch (err) {
+      request.log.warn({ err, sandbox: true }, "sandbox zerion-readiness threw");
+      return reply
+        .status(500)
+        .send(apiErrorEnvelope("SANDBOX_ZERION_READINESS_FAILED", "Failed to read Zerion integration readiness."));
+    }
+  });
+
+  app.addHook("onReady", async () => {
+    app.log.info("HTTP route registered: GET /subjects/:id/zerion-agent-summary");
   });
 
   return app;

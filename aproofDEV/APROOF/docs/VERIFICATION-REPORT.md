@@ -7,7 +7,7 @@ This document records an operational verification pass. Update it when you re-ru
 | Item | Result (latest agent run, 2026-04-12) |
 |------|----------------------------------------|
 | Backend `npm run dev` (PGlite **default** `APROOF/data/pglite` under OneDrive) | **FAIL** after retries — `PGlite failed to initialize properly` (WASM / synced-folder sensitivity). |
-| Backend `npm run dev` with `PGLITE_DATA_DIR` under `%TEMP%` | **PASS** — server listened on `0.0.0.0:3000`. |
+| Backend `npm run dev` with `PGLITE_DATA_DIR` under `%TEMP%` | **PASS** — server listened on `0.0.0.0:3040`. |
 | Backend `npm run dev:live` + `npm run test:live` | **PASS** — live PGlite dir auto-selected under `%TEMP%` when repo is under OneDrive (`live-pglite-env.ps1`). |
 | Backend automated tests | **PASS** — `verify:all`: 66 unit files / 379 tests, 22 e2e files / 151 tests, `stress:inject` 4 tests. |
 
@@ -19,7 +19,7 @@ This document records an operational verification pass. Update it when you re-ru
 
 **Ports (expected local):**
 
-- Backend: `PORT` / `APROOF_PORT` / default **3000**; `dev:live` **3101**
+- Backend: `PORT` / `APROOF_PORT` / default **3040**; `dev:live` **3101**
 
 **Env vars documented:** see [LOCAL-VERIFICATION-AND-STRESS.md](./LOCAL-VERIFICATION-AND-STRESS.md).
 
@@ -49,7 +49,7 @@ This document records an operational verification pass. Update it when you re-ru
 
 ### B. `npm run stress:api` (real HTTP)
 
-- **Result:** **PASS** (with `PGLITE_DATA_DIR` under user temp, backend on port 3000).
+- **Result:** **PASS** (with `PGLITE_DATA_DIR` under user temp, backend on port 3040).
 - Sample histogram: `200: 4881`, `201: 2`, `400: 4`, `401: 3`, `404: 1`; latency p50 ~21 ms, p95 ~37 ms (machine-dependent).
 
 ## 4. Fixes applied (stability pass)

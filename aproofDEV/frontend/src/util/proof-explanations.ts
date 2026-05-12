@@ -57,6 +57,46 @@ export function explainAngleReasonCode(code: string): { label: string; fix: stri
       label: "Angle disabled in baseline config",
       fix: "Enable the angle in baselines if this subject should be evaluated on it.",
     },
+    ZERION_INTEGRATION_NOT_READY: {
+      label: "Zerion integration prerequisites missing (API key, CLI path, wallet, or RPC)",
+      fix: "Configure server env for Zerion CLI and Solana RPC; see Settings → Zerion Agent integration.",
+    },
+    ZERION_CLI_EXECUTION_FAILED: {
+      label: "Forked Zerion CLI exited with an error",
+      fix: "Inspect CLI stderr on the API host, verify Zerion API credentials and devnet wallet funding.",
+    },
+    ZERION_TX_HASH_MISSING: {
+      label: "CLI succeeded but no transaction signature was parsed from stdout",
+      fix: "Ensure the forked CLI prints JSON with tx_hash or signature when using --json.",
+    },
+    ZERION_CLI_TIMEOUT: {
+      label: "Zerion CLI timed out",
+      fix: "Retry with a faster RPC or increase CLI-side timeouts; check network connectivity.",
+    },
+    ZERION_CLI_INVALID_OUTPUT: {
+      label: "Zerion CLI stdout was not valid structured output",
+      fix: "Fix the CLI to emit a single JSON object with tx_hash or signature on success.",
+    },
+    ZERION_POLICY_BLOCKED: {
+      label: "Execution blocked by scoped policy",
+      fix: "Adjust the proposed chain, asset, spend, or policy window to satisfy active Zerion policy.",
+    },
+    POLICY_CHAIN_NOT_ALLOWED: {
+      label: "Proposed chain is not in the allowed policy",
+      fix: "Use the configured allowed chain (e.g. solana-devnet) or update ZERION_ALLOWED_CHAIN with governance.",
+    },
+    POLICY_SPEND_LIMIT_EXCEEDED: {
+      label: "Proposed spend exceeds ZERION_MAX_SPEND_USD",
+      fix: "Lower the action amount or raise the spend cap with proper approval.",
+    },
+    POLICY_ASSET_NOT_APPROVED: {
+      label: "Asset is not in ZERION_APPROVED_ASSETS",
+      fix: "Use an approved asset or update the approved list under governance.",
+    },
+    POLICY_EXPIRED: {
+      label: "Policy validity window has expired for this action time",
+      fix: "Refresh policy_valid_until / policy bundle so the action remains within an active window.",
+    },
   };
   return (
     table[c] ?? {

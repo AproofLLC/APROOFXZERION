@@ -150,7 +150,7 @@ npm install -g pnpm
 
 ### Issue: Port already in use
 **Solution:**
-The default port is usually 5173. If it's in use, Vite will automatically try the next available port.
+The default dev port is **5273** (`strictPort: true` in `vite.config.ts`). If it is in use, stop the other listener or change `server.port` there.
 
 ### Issue: Dependencies installation fails
 **Solution:**

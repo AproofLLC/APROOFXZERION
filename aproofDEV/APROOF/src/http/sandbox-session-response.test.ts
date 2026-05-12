@@ -41,7 +41,7 @@ describe("sandbox session response contract", () => {
     expect(body.template).toBe("clean_first_proof");
   });
 
-  it("bootstrap may include subject_ids_by_rail for multi-subject demo", () => {
+  it("bootstrap may include subject_ids_by_rail for rail-keyed subject map", () => {
     const body = buildSandboxSessionSuccessBody({
       user_id: "u",
       organization_id: "o",
@@ -50,10 +50,10 @@ describe("sandbox session response contract", () => {
       bootstrap: {
         template: "demo_all_rails",
         primary_subject_id: "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee",
-        subject_ids: ["a", "b"],
-        subject_ids_by_rail: { model: "a", agent: "b" },
+        subject_ids: ["aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee"],
+        subject_ids_by_rail: { agent: "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee" },
       },
     });
-    expect(body.subject_ids_by_rail).toEqual({ model: "a", agent: "b" });
+    expect(body.subject_ids_by_rail).toEqual({ agent: "aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee" });
   });
 });

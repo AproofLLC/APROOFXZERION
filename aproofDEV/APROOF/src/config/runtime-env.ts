@@ -1,6 +1,9 @@
 /**
  * Local runtime environment helpers (port, etc.).
- * Precedence for listen port: PORT → APROOF_PORT → 3000.
+ * Precedence for listen port: PORT → APROOF_PORT → 3040.
+ *
+ * Process env for the API is loaded from `APROOF/.env` (package root) first, then optional
+ * `process.cwd()/.env` overrides — see `src/config/load-aproof-env.ts` (imported first from `main.ts`).
  */
 
 export type ListenPortSource = "PORT" | "APROOF_PORT" | "default";
@@ -26,7 +29,7 @@ export function resolveListenPortFromEnv(env: NodeJS.ProcessEnv = process.env): 
   if (fromAproof !== undefined) {
     return { port: fromAproof, source: "APROOF_PORT" };
   }
-  return { port: 3000, source: "default" };
+  return { port: 3040, source: "default" };
 }
 
 /** Log suffix for startup lines, e.g. ` (from PORT)` or ` (default)`. */

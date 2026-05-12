@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 /**
  * Single source of truth for interactive-stack HTTP checks (dev:stack + dev:check).
- * Backend = direct health on PORT/APROOF_PORT (default 3000); route semantics are verified through the Vite proxy (same path as the browser).
+ * Backend = direct health on PORT/APROOF_PORT (default 3040); route semantics are verified through the Vite proxy (same path as the browser).
  */
 /* eslint-disable no-console */
 
-/** Same precedence as APROOF `resolveListenPortFromEnv`: PORT → APROOF_PORT → 3000. */
+/** Default API listen when PORT/APROOF_PORT unset (keep in sync with APROOF `src/config/runtime-env.ts`). */
+export const DEFAULT_APROOF_DEV_API_PORT = 3040;
+
+/** Default Vite dev port in URLs for stack checks (keep in sync with `frontend/vite.config.ts` server.port). */
+export const DEFAULT_VITE_DEV_PORT = 5273;
+
+/** Same precedence as APROOF `resolveListenPortFromEnv`: PORT → APROOF_PORT → default dev API port. */
 export function resolveBackendPort(env = process.env) {
   const parse = (raw) => {
     if (raw === undefined) return undefined;
@@ -15,20 +21,22 @@ export function resolveBackendPort(env = process.env) {
     if (!Number.isInteger(n) || n < 1 || n > 65535) return undefined;
     return n;
   };
-  return parse(env.PORT) ?? parse(env.APROOF_PORT) ?? 3000;
+  return parse(env.PORT) ?? parse(env.APROOF_PORT) ?? DEFAULT_APROOF_DEV_API_PORT;
 }
 
 export function getStackUrls(env = process.env) {
   const backendPort = resolveBackendPort(env);
+  const viteOrigin = `http://127.0.0.1:${DEFAULT_VITE_DEV_PORT}`;
   return {
     backendHealth: `http://127.0.0.1:${backendPort}/health`,
     /** Prefer 127.0.0.1 so checks match IPv4 binds (Windows may resolve `localhost` to ::1 first). */
-    frontendRoot: "http://127.0.0.1:5173/",
-    proxyHealth: "http://127.0.0.1:5173/health",
+    frontendRoot: `${viteOrigin}/`,
+    proxyHealth: `${viteOrigin}/health`,
+    viteOrigin,
   };
 }
 
-export const APP_PROOFS_URL = "http://127.0.0.1:5173/app/proofs";
+export const APP_PROOFS_URL = `http://127.0.0.1:${DEFAULT_VITE_DEV_PORT}/app/proofs`;
 
 /** Harmless UUID for unauthenticated route-existence probes (auth must fail before DB subject lookup). */
 export const USER_LOG_PROBE_SUBJECT_ID = "00000000-0000-4000-8000-000000000001";
@@ -46,8 +54,9 @@ export function isFastifyRouteNotFound(status, text) {
  * Probes critical API routes through the Vite dev proxy (matches browser behavior).
  * @returns {{ ok: true } | { ok: false, detail: string }}
  */
-export async function checkProxyRouteGuardrails() {
-  const base = "http://127.0.0.1:5173";
+export async function checkProxyRouteGuardrails(env = process.env) {
+  const { viteOrigin } = getStackUrls(env);
+  const base = viteOrigin;
   const sid = USER_LOG_PROBE_SUBJECT_ID;
   const summaryPath = `/subjects/${sid}/user-logs/summary`;
   const listPath = `/subjects/${sid}/user-logs`;
@@ -148,7 +157,7 @@ export async function checkProxyRouteGuardrails() {
     const msg = e instanceof Error ? e.message : String(e);
     return {
       ok: false,
-      detail: `${msg} (proxy route guardrails — is Vite on :5173 and proxying to the API port?)`,
+      detail: `${msg} (proxy route guardrails — is Vite on :${DEFAULT_VITE_DEV_PORT} and proxying to the API port?)`,
     };
   }
 }
@@ -219,7 +228,7 @@ export async function checkProxy(env = process.env) {
       return { ok: false, layer: "Proxy", detail: `health JSON missing ok:true (${urls.proxyHealth})` };
     }
 
-    const guard = await checkProxyRouteGuardrails();
+    const guard = await checkProxyRouteGuardrails(env);
     if (!guard.ok) {
       return { ok: false, layer: "Proxy", detail: guard.detail };
     }

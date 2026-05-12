@@ -138,6 +138,11 @@ export const ProductProofSchema = z
       })
       .nullable()
       .optional(),
+    zerion_tx_hash: z.string().nullable().optional(),
+    zerion_recipient_address: z.string().nullable().optional(),
+    zerion_execution_explorer_url: z.string().nullable().optional(),
+    operational_execution_status: z.string().nullable().optional(),
+    operational_runtime_error: z.string().nullable().optional(),
     created_at: z.string(),
     updated_at: z.string(),
 

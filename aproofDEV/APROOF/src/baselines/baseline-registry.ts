@@ -21,6 +21,9 @@ export interface AngleBaseline {
   derivation_trace: string[];
 }
 
+/** Logical key for the single-subject Zerion Agent sandbox (`subjects.external_key`). */
+export const ZERION_AGENT_LOGICAL_KEY = "zerion-agent";
+
 export const BASELINE_ANGLES: readonly AngleName[] = [
   "policy_integrity",
   "identity_access_integrity",
@@ -88,6 +91,41 @@ const RULES: Record<SubjectType, Record<AngleName, { required: string[]; expecte
   },
 };
 
+/** Zerion Agent: seven-angle baseline paths mirror on-chain execution + policy + anchor stack (not generic agent tool traces). */
+const ZERION_AGENT_RULES: Record<AngleName, { required: string[]; expected: string }> = {
+  policy_integrity: {
+    required: ["policy.tags", "policy.policy_result", "zerion.chain", "zerion.amount_usd"],
+    expected:
+      "Scoped transaction policy: explicit policy_result, devnet chain, spend amount within cap, approved assets, and expiry context are present.",
+  },
+  identity_access_integrity: {
+    required: ["zerion.wallet_address", "identity_access.principal_id"],
+    expected: "Agent wallet public address matches an authorized principal for this execution.",
+  },
+  operational_integrity: {
+    required: ["operational.execution_status", "zerion.execution_attempted", "zerion.cli_invoked", "zerion.execution_source"],
+    expected:
+      "Zerion CLI execution lifecycle is recorded: attempted flag, CLI invocation, declared execution source, and operational outcome.",
+  },
+  model_identity_integrity: {
+    required: ["zerion.execution_source", "model_identity.observed_model"],
+    expected: "Autonomous agent runtime / execution channel (Zerion CLI path) and parent model linkage are coherent.",
+  },
+  retrieval_integrity: {
+    required: ["zerion.approved_assets", "zerion.max_spend_usd", "zerion.allowed_chain"],
+    expected: "Policy, spend cap, approved assets, and allowed chain used for evaluation are loaded and traceable.",
+  },
+  deterministic_integrity: {
+    required: ["deterministic.observed_digest", "correlation_id"],
+    expected: "Canonical payload and stable policy-evaluation ordering support repeatable verification.",
+  },
+  cross_system_integrity: {
+    required: ["cross_system.observed_systems", "zerion.execution_source"],
+    expected:
+      "Zerion CLI/API route, agent wallet execution, AProof ingest, proof digest, and Solana devnet anchor references align.",
+  },
+};
+
 function readPath(payload: Record<string, unknown>, path: string): unknown {
   const parts = path.split(".");
   let cur: unknown = payload;
@@ -116,13 +154,19 @@ export function normalizeSubjectType(input: string): SubjectType {
 
 export function deriveAllAngleBaselines(input: {
   subjectType: string;
+  /** When set to `zerion-agent`, use Zerion execution lifecycle baseline field paths. */
+  subjectExternalKey?: string | null;
   canonicalEvent: { payload: Record<string, unknown>; trace_id?: string };
 }): Record<AngleName, AngleBaseline> {
   const subjectType = normalizeSubjectType(input.subjectType);
   const payload = input.canonicalEvent.payload ?? {};
+  const ext = (input.subjectExternalKey ?? "").trim();
   const byAngle = {} as Record<AngleName, AngleBaseline>;
   for (const angle of BASELINE_ANGLES) {
-    const rule = RULES[subjectType][angle];
+    const rule =
+      ext === ZERION_AGENT_LOGICAL_KEY && subjectType === "agent"
+        ? ZERION_AGENT_RULES[angle]
+        : RULES[subjectType][angle];
     const used_fields: string[] = [];
     const missing_fields: string[] = [];
     const baseline_data: Record<string, unknown> = {};

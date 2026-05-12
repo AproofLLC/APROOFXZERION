@@ -5,7 +5,7 @@ param(
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $BaseUrl) {
-  $BaseUrl = if ($env:APROOF_URL) { $env:APROOF_URL } else { "http://127.0.0.1:3000" }
+  $BaseUrl = if ($env:APROOF_URL) { $env:APROOF_URL } else { "http://127.0.0.1:3040" }
 }
 
 function Run-StressScript([string]$Name, [string[]]$ExtraArgs = @()) {

@@ -43,11 +43,11 @@ export function formatDemoLastActionLine(
 
   const scenario =
     kind === "clean_proof"
-      ? "Clean proof scenario"
+      ? "Authorized Execution scenario"
       : kind === "failure"
-        ? "Failure scenario"
+        ? "Blocked Execution scenario"
         : kind === "version_update"
-          ? "Version update scenario"
+          ? "Execution Continuity scenario"
           : "Demo reset";
 
   if (kind === "version_update") {

@@ -49,7 +49,8 @@ function railConformantSubline(rail: string): string {
   const r = rail?.trim() || "system";
   if (r === "model")
     return "Model outputs satisfied active identity, policy, and operational baselines.";
-  if (r === "agent") return "Agent task satisfied active policy and operational baselines.";
+  if (r === "agent")
+    return "Zerion Agent execution path satisfied scoped policy, operational, and cross-system baselines on Solana devnet.";
   if (r === "service") return "Service action satisfied active policy and operational baselines.";
   if (r === "endpoint") return "Endpoint request satisfied active access and operational baselines.";
   return "System event remained aligned across active policy, operational, and cross-system baselines.";
@@ -58,7 +59,8 @@ function railConformantSubline(rail: string): string {
 function railNonConformantSubline(rail: string): string {
   const r = rail?.trim() || "system";
   if (r === "model") return "Model outputs violated an active baseline (identity, policy, or operations).";
-  if (r === "agent") return "Agent task violated an active policy or operational baseline.";
+  if (r === "agent")
+    return "Zerion Agent action violated scoped policy or operational baseline (see Failure Locator for the angle and reason code).";
   if (r === "service") return "Service action violated an active policy or operational baseline.";
   if (r === "endpoint") return "Endpoint request violated the active access or operational baseline.";
   return "System event violated active policy or cross-system baseline expectations.";
@@ -173,9 +175,46 @@ function humanizeReasonSnippet(code: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/** When exactly one angle fails and it is operational, all other angles are pass/warn (demo strip). */
+export function getOperationalOnlySixOfSevenCopy(
+  anglesSummary: Array<{ angle: string; status: string }> | undefined | null,
+): string | null {
+  if (!Array.isArray(anglesSummary) || anglesSummary.length === 0) return null;
+  const op = anglesSummary.find((a) => a.angle === "operational_integrity");
+  if (op?.status !== "fail") return null;
+  const others = anglesSummary.filter((a) => a.angle !== "operational_integrity");
+  if (others.length === 0) return null;
+  const othersOk = others.every((a) => a.status === "pass" || a.status === "warn");
+  return othersOk ? "6/7 integrity checks passed — blocked at operational_integrity." : null;
+}
+
 /** Overview `latest_proof_snapshot.status` uses DB unit aggregate (`conformant` / `violated`). */
-export function getDemoOverviewOutcomeCopy(rail: string, snapshotStatus: string | null | undefined): string {
+export function getDemoOverviewOutcomeCopy(
+  rail: string,
+  snapshotStatus: string | null | undefined,
+  operationalReasonCode?: string | null,
+  zerionTxHash?: string | null,
+  anchorSignature?: string | null,
+): string {
   const cls = classifyEngineProofOutcome(snapshotStatus);
+  const r = rail?.trim() || "system";
+  const rc = (operationalReasonCode ?? "").trim();
+  const ztx = typeof zerionTxHash === "string" && zerionTxHash.trim().length >= 32 ? zerionTxHash.trim() : "";
+  const anchor =
+    typeof anchorSignature === "string" && anchorSignature.trim().length >= 32 ? anchorSignature.trim() : "";
+
+  if (r === "agent" && rc === "ZERION_INTEGRATION_NOT_READY") {
+    return "Execution layer incomplete — AProof policy/proof/anchor path is working, but live Zerion CLI execution is not configured.";
+  }
+  if (cls === "non_conformant" && r === "agent" && rc === "POLICY_SPEND_LIMIT_EXCEEDED") {
+    return "Execution blocked before Zerion CLI invocation due to scoped policy violation.";
+  }
+  if (r === "agent" && anchor && !ztx) {
+    return "AProof proof anchored; no execution tx yet.";
+  }
+  if (r === "agent" && !ztx) {
+    return "No execution tx yet.";
+  }
   if (cls === "conformant") return railConformantSubline(rail);
   if (cls === "non_conformant") return railNonConformantSubline(rail);
   if (cls === "partial") return "Latest proof is flagged — review before treating it as conformant.";

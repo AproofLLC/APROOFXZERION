@@ -110,6 +110,87 @@ export function ProofsEvents({ subjectId }: { subjectId: string }) {
             <TruthRow label="lineage_id" value={truthScalar(d.lineage_id)} />
             <TruthRow label="source_type" value={truthScalar(d.source_type)} />
             <Separator />
+            <p className="text-xs font-medium text-muted-foreground">Execution (Zerion / payload)</p>
+            <TruthRow
+              label="zerion.tx_hash"
+              value={truthScalar(
+                (() => {
+                  const raw = d.raw_payload;
+                  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+                  const z = (raw as Record<string, unknown>).zerion;
+                  if (z === null || typeof z !== "object" || Array.isArray(z)) return null;
+                  const h = (z as Record<string, unknown>).tx_hash;
+                  return typeof h === "string" ? h : null;
+                })(),
+              )}
+            />
+            <TruthRow
+              label="operational.runtime_error"
+              value={truthScalar(
+                (() => {
+                  const raw = d.raw_payload;
+                  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+                  const op = (raw as Record<string, unknown>).operational;
+                  if (op === null || typeof op !== "object" || Array.isArray(op)) return null;
+                  const re = (op as Record<string, unknown>).runtime_error;
+                  if (re === null || re === undefined) return null;
+                  return typeof re === "string" ? re : null;
+                })(),
+              )}
+            />
+            <TruthRow
+              label="zerion.execution_source"
+              value={truthScalar(
+                (() => {
+                  const raw = d.raw_payload;
+                  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+                  const z = (raw as Record<string, unknown>).zerion;
+                  if (z === null || typeof z !== "object" || Array.isArray(z)) return null;
+                  const s = (z as Record<string, unknown>).execution_source;
+                  return typeof s === "string" ? s : null;
+                })(),
+              )}
+            />
+            <TruthRow
+              label="zerion.cli_invoked"
+              value={truthScalar(
+                (() => {
+                  const raw = d.raw_payload;
+                  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+                  const z = (raw as Record<string, unknown>).zerion;
+                  if (z === null || typeof z !== "object" || Array.isArray(z)) return null;
+                  const v = (z as Record<string, unknown>).cli_invoked;
+                  return typeof v === "boolean" ? String(v) : null;
+                })(),
+              )}
+            />
+            <TruthRow
+              label="zerion.execution_attempted"
+              value={truthScalar(
+                (() => {
+                  const raw = d.raw_payload;
+                  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+                  const z = (raw as Record<string, unknown>).zerion;
+                  if (z === null || typeof z !== "object" || Array.isArray(z)) return null;
+                  const v = (z as Record<string, unknown>).execution_attempted;
+                  return typeof v === "boolean" ? String(v) : null;
+                })(),
+              )}
+            />
+            <TruthRow
+              label="zerion.execution_simulated"
+              value={truthScalar(
+                (() => {
+                  const raw = d.raw_payload;
+                  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+                  const z = (raw as Record<string, unknown>).zerion;
+                  if (z === null || typeof z !== "object" || Array.isArray(z)) return null;
+                  const v = (z as Record<string, unknown>).execution_simulated;
+                  return typeof v === "boolean" ? String(v) : null;
+                })(),
+              )}
+            />
+            <Separator />
             <p className="text-xs font-medium text-muted-foreground">Identity &amp; linkage</p>
             <TruthRow label="event_id" value={truthScalar(d.event_id)} />
             <TruthRow label="subject_id" value={truthScalar(d.subject_id)} />

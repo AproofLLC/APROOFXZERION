@@ -82,7 +82,7 @@ describe("solana devnet anchor config", () => {
         kp,
         config,
       ),
-    ).rejects.toThrow(/SOLANA_AUTO_AIRDROP_DEVNET=false/);
+    ).rejects.toThrow(/SOLANA_DEVNET_WALLET_UNFUNDED/);
     expect(requestAirdrop).not.toHaveBeenCalled();
   });
 
@@ -141,7 +141,7 @@ describe("solana devnet anchor config", () => {
         kp,
         config,
       ),
-    ).rejects.toThrow(/devnet airdrop request\/confirmation failed/);
+    ).rejects.toThrow(/SOLANA_DEVNET_ANCHOR_FAILED/);
   });
 
   it("auto-airdrop true fails when balance still below minimum after airdrop", async () => {
@@ -165,7 +165,7 @@ describe("solana devnet anchor config", () => {
         kp,
         config,
       ),
-    ).rejects.toThrow(/balance remains/);
+    ).rejects.toThrow(/SOLANA_DEVNET_WALLET_UNFUNDED/);
   });
 
   it("rejects mainnet/mainnet-beta cluster", () => {

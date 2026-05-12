@@ -3,13 +3,13 @@
  * Local control-plane + read-model stress pass (real HTTP, no mocks).
  * Usage (from APROOF/):  node scripts/stress-api-load.mjs
  * Env:
- *   STRESS_BASE_URL   default http://127.0.0.1:3000
+ *   STRESS_BASE_URL   default http://127.0.0.1:3040
  *   STRESS_ROUNDS     default 25   (sequential multi-get cycles)
  *   STRESS_CONCURRENCY default 15  (parallel in-flight per burst)
  */
 /* eslint-disable no-console */
 
-const BASE = (process.env.STRESS_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
+const BASE = (process.env.STRESS_BASE_URL ?? "http://127.0.0.1:3040").replace(/\/$/, "");
 const ROUNDS = Math.max(1, Number(process.env.STRESS_ROUNDS ?? "25") || 25);
 const CONCURRENCY = Math.max(1, Number(process.env.STRESS_CONCURRENCY ?? "15") || 15);
 

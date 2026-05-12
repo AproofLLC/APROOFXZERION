@@ -2,19 +2,19 @@
 #   . (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "live-common.ps1")
 #
 # Prerequisite (from APROOF directory, same PGlite dir as the server):
-#   Full stack proof harness (fresh DB + API :3000 + PS1 + e2e + Vite check): from repo root, npm run harness:full
+#   Full stack proof harness (fresh DB + API :3040 + PS1 + e2e + Vite check): from repo root, npm run harness:full
 #   Recommended: npm run dev:live   → PORT 3101, fresh data\live-test-run-fresh (or TEMP on OneDrive trees)
 #   Or manual:
 #   $env:APROOF_DB_MODE = "pglite"
 #   $env:PGLITE_DATA_DIR = "$PWD\data\your-db"
-#   npm run db:migrate && npm run seed && npm run seed:live && npm run dev   # default port 3000 unless PORT set
+#   npm run db:migrate && npm run seed && npm run seed:live && npm run dev   # default port 3040 unless PORT set
 #
 # API requires UUID subject_id, org/env, trace_id, occurred_at, x-api-key, and a mapped source_type_key.
 #
 # PGlite: POST /events resolves subjects with (subject_id, organization_id, environment_id).
 # register-test-subject MUST use the same database files as the server, or you get NOT_PROOFABLE / subject_not_unique_or_missing (0 rows).
 # For local live runs, keep server and scripts on the same path, for example:
-#   C:\Users\fusio\Desktop\aproofbackend\APROOF\data\pglite
+#   <repo>\APROOF\data\pglite
 # Align with APROOF runtime (see src/db/pglite.ts):
 #   1) PGLITE_DATA_DIR
 #   2) APROOF_PGLITE_DATA_DIR
@@ -35,7 +35,7 @@ if (-not $env:PGLITE_DATA_DIR) {
   }
 }
 
-$script:LiveBaseUrl = if ($env:APROOF_URL) { $env:APROOF_URL.TrimEnd('/') } else { "http://127.0.0.1:3000" }
+$script:LiveBaseUrl = if ($env:APROOF_URL) { $env:APROOF_URL.TrimEnd('/') } else { "http://127.0.0.1:3040" }
 $script:LiveApiKey = if ($env:APROOF_API_KEY) { $env:APROOF_API_KEY } else { "aproof_demo_insecure_change_me" }
 $script:LiveOrgId = "11111111-1111-4111-8111-111111111111"
 $script:LiveEnvId = "22222222-2222-4222-8222-222222222222"

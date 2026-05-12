@@ -21,7 +21,7 @@ export const SANDBOX_SCENARIO_LABELS: Record<SandboxScenarioTemplate, string> = 
   policy_violation: "Policy violation",
   lineage_version_bump: "Version progression",
   governed_model_response: "Governed model response",
-  demo_all_rails: "Multi-subject demo (all rails)",
+  demo_all_rails: "Zerion Agent demo (Solana devnet)",
 };
 
 export function getSandboxScenarioLabel(templateId: string | null | undefined): string {

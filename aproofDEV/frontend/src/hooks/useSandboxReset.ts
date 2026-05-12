@@ -11,7 +11,7 @@ export type SandboxResetInput =
 
 /**
  * Clears testnet generated data or appends deterministic scenario events (cookie session).
- * Full mode returns the demo to an empty prepared workspace; targeted mode appends one rail scenario.
+ * Full mode returns the demo to an empty prepared workspace; targeted mode appends one Zerion Agent scenario.
  */
 export function useSandboxReset() {
   const qc = useQueryClient();
@@ -45,6 +45,7 @@ export function useSandboxReset() {
       qc.removeQueries({ queryKey: ["failure"] });
       qc.removeQueries({ queryKey: ["lineage"] });
       qc.removeQueries({ queryKey: ["demo-state"] });
+      qc.removeQueries({ queryKey: ["sandbox", "zerion-readiness"] });
       qc.removeQueries({ queryKey: ["subject-user-log-summary"] });
       qc.removeQueries({ queryKey: ["subject-user-logs"] });
       await qc.invalidateQueries({ queryKey: ["session"] });

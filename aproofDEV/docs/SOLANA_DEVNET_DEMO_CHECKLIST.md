@@ -32,7 +32,7 @@ npm run dev:stack:devnet
 
 `dev:stack:devnet` runs a Devnet preflight smoke. If Devnet anchoring is not ready, startup fails fast.
 
-Open: `http://127.0.0.1:5173/app/proofs`
+Open: `http://127.0.0.1:5273/app/proofs`
 
 ## Reviewer Flow
 

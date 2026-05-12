@@ -1,6 +1,6 @@
 ﻿# Burst-test: 50× POST /events (unique lineages per tick).
 # Prereq (from APROOF): npm run db:migrate; npm run seed; npm run seed:live
-#   then npm run dev (default http://127.0.0.1:3000).
+#   then npm run dev (default http://127.0.0.1:3040).
 # Uses seeded subject SubjBurstLive (burst-live-001).
 
 param(

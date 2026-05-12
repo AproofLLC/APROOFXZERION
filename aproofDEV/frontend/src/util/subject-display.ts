@@ -5,7 +5,10 @@ export function subjectDisplayLabel(s: Pick<Subject, "display_name" | "external_
   const dn = s.display_name?.trim();
   if (dn) return dn;
   const ek = s.external_key?.trim();
-  if (ek) return ek;
+  if (ek) {
+    if (ek === "zerion-agent") return "Zerion Agent";
+    return ek;
+  }
   return s.subject_id;
 }
 

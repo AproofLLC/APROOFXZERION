@@ -7,15 +7,24 @@
 **/.vite/
 .local/
 APROOF/.local/
+# Devnet keypairs and local DB — never commit secrets or PGlite files.
+*.key
+*.pem
+*keypair*.json
+zerion-agent-keypair.json
+solana-devnet-keypair.json
+anchor-devnet.json
 *.log
 *.tmp
 logs/
 data/
+APROOF/data/
 
 # Local env (untracked OK — release:preflight fails only on git-tracked secrets; see README)
 .env
 .env.*
 !.env.example
+!.env.demo.example
 *.keypair.json
 anchor-devnet.json
 wallets/
@@ -24,6 +33,7 @@ secrets/
 # Local DB / cache (if created at repo root)
 *.sqlite
 *.sqlite-journal
+*.db
 
 # OS
 .DS_Store

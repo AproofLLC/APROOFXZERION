@@ -196,6 +196,16 @@ export interface ProductProof {
     simulated_commitment: string;
     external_attested: false;
   } | null;
+  /** From `payload.zerion.tx_hash` when present (Zerion / on-chain execution ref). */
+  zerion_tx_hash?: string | null;
+  /** From `payload.zerion.recipient_address` when present (execution route continuity). */
+  zerion_recipient_address?: string | null;
+  /** Derived explorer URL for `zerion_tx_hash` (execution tx), not the proof anchor. */
+  zerion_execution_explorer_url?: string | null;
+  /** From `payload.operational.execution_status` for execution lifecycle readouts. */
+  operational_execution_status?: string | null;
+  /** From `payload.operational.runtime_error` (deterministic Zerion/policy codes when set). */
+  operational_runtime_error?: string | null;
   created_at: string;
   updated_at: string;
 
@@ -568,6 +578,11 @@ export const EXAMPLE_PRODUCT_PROOF: ProductProof = {
   anchor_tx_hash: null,
   anchor_timestamp: null,
   solana_sandbox: null,
+  zerion_tx_hash: null,
+  zerion_recipient_address: null,
+  zerion_execution_explorer_url: null,
+  operational_execution_status: null,
+  operational_runtime_error: null,
   created_at: "2026-04-04T22:14:10Z",
   updated_at: "2026-04-04T22:14:10Z",
   event_id: "evt_001",

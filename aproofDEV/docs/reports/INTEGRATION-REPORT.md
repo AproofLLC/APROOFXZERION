@@ -10,7 +10,7 @@
 cd APROOF
 npm install
 npm run db:setup   # or your env’s migrate + seed path
-npm run dev        # listens on PORT from env (often 3000)
+npm run dev        # listens on PORT from env (often 3040)
 ```
 
 **Frontend** (dev uses Vite proxy to the API; cookies must be same-site with the proxy):
@@ -18,10 +18,10 @@ npm run dev        # listens on PORT from env (often 3000)
 ```bash
 cd frontend
 npm install
-npm run dev        # http://127.0.0.1:5173 — proxies /auth, /subjects, /proofs, etc.
+npm run dev        # http://127.0.0.1:5273 — proxies /auth, /subjects, /proofs, etc.
 ```
 
-Optional: `VITE_API_PROXY_TARGET=http://127.0.0.1:3000`, or set `APROOF_PORT` when the API is not on **3000** (Vite does not use shell `PORT` for the proxy target).
+Optional: `VITE_API_PROXY_TARGET=http://127.0.0.1:3040`, or set `APROOF_PORT` when the API is not on **3040** (Vite does not use shell `PORT` for the proxy target).
 
 Production build:
 

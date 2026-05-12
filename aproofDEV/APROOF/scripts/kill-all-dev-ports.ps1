@@ -1,7 +1,13 @@
 # Kill listeners on common dev ports (API, Vite dev/preview, debug).
 $ErrorActionPreference = "SilentlyContinue"
-# Stack ports only (avoid unrelated services like httpd on 8080).
-$ports = @(3000, 3001, 3101, 4173, 5173, 5174, 5175, 9229)
+# Stack + Vite fallbacks + preview + Node inspect (+ common alternate API ports).
+# Omit 8080: often used by unrelated local httpd; repo docker-compose example maps web there.
+$ports = @(
+  3000, 3001, 3005, 3040, 3101, 4173, 4273,
+  5173, 5174, 5175, 5176, 5177, 5178,
+  5273, 5274, 5275, 5276, 5277, 5278,
+  9229
+)
 $stopped = New-Object System.Collections.Generic.List[string]
 
 foreach ($port in $ports) {

@@ -72,11 +72,17 @@ export interface HashableProofPayload {
   canonical_hash: string;
   artifact_hash: string | null;
   occurrence_hash: string | null;
+
+  /** Execution refs from ingest payload (Zerion / operational); null when absent. */
+  zerion_tx_hash: string | null;
+  zerion_recipient_address: string | null;
+  operational_runtime_error: string | null;
 }
 
 /**
  * Maps ProductProof → stable payload for hashing.
- * Excludes: received_at, proof_summary, flags_count, highest_severity, anchor_*, created_at, updated_at, proof_digest.
+ * Excludes: received_at, proof_summary, flags_count, highest_severity, anchor_*, created_at, updated_at, proof_digest,
+ * zerion_execution_explorer_url (derived URL; not part of the committed digest material).
  * Normalizes optional angle fields so undefined/null cannot drift between write and reconstruction.
  */
 export function toHashableProofPayload(proof: ProductProof): HashableProofPayload {
@@ -151,6 +157,10 @@ export function toHashableProofPayload(proof: ProductProof): HashableProofPayloa
     canonical_hash: proof.canonical_hash,
     artifact_hash: proof.artifact_hash ?? null,
     occurrence_hash: proof.occurrence_hash ?? null,
+
+    zerion_tx_hash: proof.zerion_tx_hash ?? null,
+    zerion_recipient_address: proof.zerion_recipient_address ?? null,
+    operational_runtime_error: proof.operational_runtime_error ?? null,
   };
 }
 

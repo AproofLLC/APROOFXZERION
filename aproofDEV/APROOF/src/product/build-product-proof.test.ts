@@ -31,6 +31,7 @@ function basePipeline(overrides: Partial<ProcessEventSuccess> = {}): ProcessEven
     event_id: eventId,
     canonical_event_type: "policy_checked",
     subject_rail: "service",
+    subject_external_key: null,
     proof_units: [
       {
         proof_id: proofId,
@@ -77,6 +78,36 @@ describe("buildProductProof", () => {
       expect(angle.applicable).toBe(false);
       expect(angle.evidence_refs).toEqual([]);
     }
+  });
+
+  it("copies Zerion execution snapshot fields from payload into product_proof and digest material", () => {
+    const tx =
+      "StubZerionDevnetTxXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+    const recipient = "11111111111111111111111111111111";
+    const body = baseBody({
+      payload: {
+        host: "zerion-agent-demo",
+        policy: { tags: ["allow_read"] },
+        zerion: { tx_hash: tx, recipient_address: recipient, execution_source: "zerion_cli", cli_invoked: true, execution_attempted: true },
+        operational: { execution_status: "success", latency_ms: 10, runtime_error: null },
+      },
+    });
+    const proof = buildProductProof({
+      body,
+      pipeline: basePipeline(),
+      receivedAt: new Date("2026-04-04T12:00:01.000Z"),
+    });
+    expect(proof.zerion_tx_hash).toBe(tx);
+    expect(proof.zerion_recipient_address).toBe(recipient);
+    expect(proof.zerion_execution_explorer_url).toBe(
+      `https://explorer.solana.com/tx/${tx}?cluster=devnet`,
+    );
+    expect(proof.operational_execution_status).toBe("success");
+    expect(proof.operational_runtime_error).toBeNull();
+    const h = toHashableProofPayload(proof);
+    expect(h.zerion_tx_hash).toBe(tx);
+    expect(h.zerion_recipient_address).toBe(recipient);
+    expect(h.operational_runtime_error).toBeNull();
   });
 
   it("returns a valid ProductProof with seven angles and stable digest", () => {

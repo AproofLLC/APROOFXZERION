@@ -1,205 +1,141 @@
-# Aproof
+# AProof × Zerion — Deterministic Governance for Autonomous Onchain Execution
 
-**Aproof** is a proof-engine workspace: ingest events, evaluate integrity across seven angles, and surface proofs, failures, and lineage through a real API and a React dashboard.
+Public hackathon / review drop: **Solana devnet** demo wiring for a Zerion execution agent governed and proven by **AProof**. Nothing in this document replaces `npm run verify`; use it before publishing or judging.
 
-## What lives where
+**Public demo safety:** This demo uses Solana devnet. Do not use production private keys. Do not reuse funded mainnet wallets. All local keypairs are generated under `APROOF/.local/` and ignored by git.
 
-| Path | Role |
-|------|------|
-| **`APROOF/`** | Backend Fastify API, proof pipeline, ingest, PGlite/Postgres, Vitest tests |
-| **`frontend/`** | Vite + React UI (proofs dashboard, sandbox, session auth) |
-| **`docs/`** | Top-level docs and archived reports |
-| **`scripts/`** | Shared tooling; **`scripts/live-ps1/`** powers `npm run test:live` (PowerShell) |
+## 1. What this is
 
-Backend-focused docs also live under **`APROOF/docs/`**.
+**AProof** adds deterministic governance, proof verification, failure localization, and Solana devnet anchoring to an autonomous **Zerion** execution agent. Events flow through scoped policy, a fork-compatible **Zerion CLI executor**, real devnet transactions when allowed, then a **seven-angle** deterministic proof pipeline and a **separate** anchor transaction that commits proof digests on-chain.
 
-## Sandbox (short)
+## 2. Core thesis
 
-The **Sandbox** in the UI provisions a real testnet org and session (same routes and proof pipeline as production). Optional **demo scenarios** seed deterministic data through the same ingest path as production (`POST /events`). See **`docs/README.md`**.
+**“Zerion executes. AProof governs, verifies, and anchors.”**
 
-## Demo Mode (guided workspace)
+## 3. Demo scenarios
 
-From the welcome screen, **Start Demo** signs you into a sandbox session and opens **`/app/proofs`**. In demo mode you get:
+### Authorized Execution
 
-- **Demo controls** (clean proof, failure, version update, reset) that call the same sandbox reset API as automated harnesses.
-- **Latest proof strip** at the top of the workspace: shows engine outcome vocabulary (**conformant / violated / flagged / unverifiable / pending**) and a **last action** line derived from the overview snapshot after each scenario—not from button labels.
-- **Baselines** tab is read-only and groups **active-by-default** angles (per rail) vs **optional** angles, with copy tied to real baseline state and rail defaults (`frontend/src/constants/rail-auto-enabled.ts`, aligned with `APROOF/src/baselines/angle-control.ts`).
+- Policy passes (chain, asset, spend).
+- **Zerion Agent** invokes the executor and produces a **real** Solana devnet transaction.
+- **AProof** ingests the result, builds the proof, and **anchors** the digest (separate tx from execution).
 
-Use **`npm run verify`** (root) before sharing the repo; use **`npm run dev:stack`** when you want the full Vite + API stack for manual demo review.
+### Blocked Execution
 
-### Devnet-only secure stack profile
+- Policy violation (for example over spend limit).
+- Executor / CLI is **not** invoked; **no** execution transaction is created.
+- **AProof** still yields a **deterministic failure proof** localizing the violation.
 
-This repository now enforces a Devnet-only startup profile for demo stack runs:
+### Execution Continuity
 
-- `npm run dev:stack` (or `npm run dev:stack:devnet`) always:
-  - stops existing listeners
-  - enforces `ANCHOR_MODE=solana-devnet`
-  - enforces `SOLANA_CLUSTER=devnet`
-  - enforces `APROOF_REQUIRE_DEVNET_FOR_DEMO=1`
-  - runs `anchor:devnet:smoke` preflight
-  - starts backend + frontend only if preflight succeeds
-  - runs under a supervised stack wrapper that auto-restarts the stack up to 3 times if the API process exits unexpectedly
+- **Same** sender and **same** continuity recipient as a prior authorized run.
+- A **new** execution `tx_hash` (new on-chain transaction).
+- **`event_version`** increments; **new** proof and **new** anchor.
 
-Always run `npm run dev:check` after startup.
+## 4. What judges should verify
 
-Sandbox demo routes now enforce Devnet by default (`APROOF_REQUIRE_DEVNET_FOR_DEMO=1` unless explicitly overridden). If devnet mode/config is missing, `/sandbox/session` and `/sandbox/reset` return `DEMO_REQUIRES_DEVNET` instead of silently running mock anchors.
+- **Execution** transaction hash and Solana devnet explorer link.
+- **Proof digest** and **seven-angle** proof summary (conformant / violated / flagged / … per angle rules).
+- **Anchor signature** (batch anchor tx) and **anchor** explorer link.
+- Trace **lineage** across continuity (`event_version`, subject identity).
+- Confirm **execution tx** and **proof anchor tx** are **different** signatures and roles.
 
-## Run the backend
+## 5. Architecture (data flow)
+
+```text
+User action (UI / API)
+  → scoped policy check
+  → Zerion execution adapter (forked CLI or bundled devnet reference script)
+  → Solana devnet execution transaction
+  → tx_hash
+  → AProof event ingestion
+  → seven-angle deterministic proof
+  → Solana devnet anchor (proof batch / memo commitment)
+  → explorer verification
+```
+
+Executor contract (argv + JSON): [`APROOF/docs/zerion-agent-contract.md`](APROOF/docs/zerion-agent-contract.md).  
+Local hardwire guide: [`APROOF/docs/hardwire-local-zerion-agent.md`](APROOF/docs/hardwire-local-zerion-agent.md).  
+Bundled reference executor (Solana transfer, same CLI shape as Zerion): `APROOF/scripts/aproof-agent-devnet-execute.mjs`.
+
+## 6. Wallet separation
+
+| Role | Typical env | Purpose |
+|------|-------------|--------|
+| **Execution** | `ZERION_AGENT_WALLET_ADDRESS` (+ `ZERION_AGENT_KEYPAIR_PATH` for the local executor) | Signs **execution** devnet txs via the Zerion adapter. |
+| **Continuity recipient** | `ZERION_CONTINUITY_RECIPIENT_ADDRESS` | Stable recipient for the continuity scenario. |
+| **Anchor** | `SOLANA_KEYPAIR_PATH` | Signs **anchor** txs that commit AProof proof digests / batch roots. |
+
+**Execution** transactions and **proof anchor** transactions are intentionally **separate**: different purposes, different signatures, both visible on devnet explorers.
+
+## 7. Local setup
+
+From the **repository root**:
 
 ```bash
-cd APROOF
 npm install
-npm run dev
-```
-
-Default local DB is **PGlite** (file-backed under `APROOF/data/` when you run dev). Copy **`APROOF/.env.example`** to **`APROOF/.env`** for local overrides — that file is **gitignored** and must stay **untracked**. **`npm run release:preflight`** only fails if a `.env` / `.env.*` file (other than `.env.example`) is **committed**; untracked local env files are expected.
-
-### Solana Devnet Anchoring (optional)
-
-Sandbox subjects/events stay sandbox/testnet demo data, but proof batch commitments can be written to real Solana Devnet when enabled.
-
-- Required env vars (in `APROOF/.env`, never committed):
-  - `ANCHOR_MODE=solana-devnet`
-  - `SOLANA_RPC_URL=https://api.devnet.solana.com`
-  - `SOLANA_CLUSTER=devnet`
-  - `SOLANA_KEYPAIR_PATH=/secure/path/anchor-devnet.json`
-  - `SOLANA_EXPLORER_BASE_URL=https://explorer.solana.com`
-- If `ANCHOR_MODE` is missing, backend preserves sandbox/mock anchoring behavior.
-- If `ANCHOR_MODE=solana-devnet` and config is invalid, anchoring fails with deterministic `SOLANA_CONFIG_INVALID` / `SOLANA_ANCHOR_FAILED` messages.
-- Never commit keypairs; private key material is never stored in DB/API/UI.
-- Wallet note template: `docs/SOLANA_DEVNET_WALLET_NOTE_TEMPLATE.md`.
-
-Useful commands:
-
-```bash
 cd APROOF
-npm run solana:devnet:wallet:init
-npm run solana:devnet:wallet:balance
-npm run anchor:devnet:test
-npm run anchor:devnet:smoke
+cp .env.example .env
+# Edit .env — see section 8 (never commit real values).
+npm run zerion:wallet:generate
+npm run devnet:wallet:bootstrap
+npm run zerion:readiness
+cd ..
+npm run dev:stack:skip-smoke
 ```
 
-### Self-contained Solana Devnet demo without Solana CLI
+Then open the printed app URL (Vite on **5273** with API proxy). Optional: `npm run dev:check`.
 
-- The backend can create a devnet wallet locally with `@solana/web3.js`.
-- Default wallet path is `APROOF/.local/solana/anchor-devnet.json` when `SOLANA_AUTOCREATE_DEVNET_WALLET=true`.
-- The wallet file is gitignored and should remain local-only.
-- Devnet SOL is requested through RPC (`requestAirdrop`) when balance is below `SOLANA_MIN_BALANCE_LAMPORTS` and `SOLANA_AUTO_AIRDROP_DEVNET=true`.
-- No real funds are used; this is devnet-only behavior and rejected for non-devnet clusters.
-- Proof batches still anchor to real Solana Devnet transactions and expose real `tx_signature` and `explorer_url`.
+Detail: [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
-Explorer verification:
+## 8. Required env (placeholders only)
 
-- Open `https://explorer.solana.com/tx/<TX_SIGNATURE>?cluster=devnet`
+Set real values in **`APROOF/.env`** (gitignored). The committed templates are safe:
 
-### How Aproof Uses Solana
+- [`APROOF/.env.example`](APROOF/.env.example) — **empty** secrets, documented keys.
+- [`APROOF/.env.demo.example`](APROOF/.env.demo.example) — **fake** `replace_me` shape for orientation only.
 
-- Aproof does not write raw customer/user payloads on-chain.
-- Aproof canonicalizes proof outputs and computes deterministic proof digests.
-- Digests are batched into a deterministic `root_hash`.
-- Only the batch commitment is anchored to Solana Devnet via Memo transaction.
-- Backend stores `tx_signature`, `explorer_url`, and anchor metadata.
-- UI links `Proof -> Batch Root -> Solana Transaction` for reviewer verification.
-- This provides verifiable existence/integrity with a timestamped external attestation trail.
+Keys you must understand:
 
-## Run the frontend
+`ZERION_API_KEY`, `ZERION_CLI_PATH`, `ZERION_AGENT_WALLET_ADDRESS`, `ZERION_AGENT_KEYPAIR_PATH`, `ZERION_AUTHORIZED_RECIPIENT_ADDRESS`, `ZERION_CONTINUITY_RECIPIENT_ADDRESS`, `ZERION_ALLOWED_CHAIN`, `ZERION_MAX_SPEND_USD`, `ZERION_APPROVED_ASSETS`, `SOLANA_RPC_URL`, `SOLANA_KEYPAIR_PATH`, `ANCHOR_MODE`, `APROOF_ENV`, `SOLANA_MIN_BALANCE_LAMPORTS`.
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## 9. Security note
 
-Open **`http://127.0.0.1:5173/`** and use **`/app/proofs`**. **Local development always uses the Vite dev server and its proxy** — the browser should load **`http://127.0.0.1:5173`** only; **do not** test the app by opening the raw API URL in the browser (that bypasses the proxy and invites CORS confusion). With `VITE_API_BASE_URL` unset, API paths are root-relative (for example `/proofs`, `/subjects`, `/health`) and Vite forwards them to **`VITE_API_PROXY_TARGET`**, or **`http://127.0.0.1:<APROOF_PORT or 3000>`** (`frontend/vite.config.ts` does **not** use shell **`PORT`** for the proxy target). **`strictPort: true`** keeps the UI on **5173** so HMR matches the page origin. Set **`VITE_API_BASE_URL`** only for a non-default API origin (e.g. staging).
+Never commit `.env`, `.local/`, private key material, keypair JSON, PEM files, or real API keys. Use `npm run repo:safety-check` in a git checkout to fail fast on accidental tracking.
 
-## Interactive testing (manual — official workflow)
-
-Use this for **manual** sandbox/UI checks. **Automated verification** (`npm run verify` from the repo root, `npm run test:live`, CI) is a **separate mode** from this interactive stack: automation does not require the Vite + proxy workflow below.
-
-**From the repository root** (install root deps once: `npm install`):
-
-1. **`npm run stop:stack`** — free dev ports (optional clean slate).
-2. **`npm run dev:stack`** — starts the **backend** (default **`:3000`**, or **`PORT`/`APROOF_PORT`** if set), then the **Vite** dev server (`:5173`), then waits until **Backend**, **Frontend**, and **Proxy** (`/health` through Vite) are all healthy. Only then prints **App ready at** (see terminal output).
-3. Wait until you see **App ready at: `http://127.0.0.1:5173/app/proofs`** — do not treat the stack as ready before that line.
-4. **Optional:** **`npm run dev:check`** in another terminal — same checks as startup: backend `/health` on the **resolved API port**, Vite on **:5173**, then **`/health` plus route guardrails through the proxy** (`GET /auth/session`, user-log routes, `POST /sandbox/session` probe). If an old API process is still running **without** newly added routes, the **Proxy** step fails with a clear “stale backend / restart from current source” message (Fastify **404** “Route … not found” behind the proxy). **Fix:** **`npm run stop:stack`**, start again from current source, **`npm run dev:check`**. **`npm run dev:user-log-routes`** runs only the proxy route probes (expects Vite + API already up).
-5. Open **`http://127.0.0.1:5173/app/proofs`**.
-6. Test sandbox or signed-in flow.
-7. **`npm run stop:stack`** when finished (or **Ctrl+C** in the `dev:stack` terminal).
-
-If the API or proxy is down, the dev UI shows a **top banner** and **Enter Sandbox** stays disabled until `/health` succeeds through the same path as the rest of the app (relative URLs → Vite proxy when `VITE_API_BASE_URL` is unset).
-
-## Verification
-
-**One-shot (repo root):** backend `verify:all`, frontend typecheck + Vitest + build, sandbox template parity:
+## 10. Verification
 
 ```bash
 npm run verify
+npm run repo:safety-check
 ```
 
-**Backend (full) only:** from **`APROOF/`**:
-
 ```bash
+cd APROOF
 npm run verify:all
 ```
 
-Runs typecheck, build, unit tests, e2e tests, and stress inject.
+## Repo layout
 
-**Frontend:** from **`frontend/`** — `npm run typecheck`, `npm run test` (Vitest), `npm run build`.
+- **`APROOF/`** — backend proof engine, Zerion execution adapter, Solana anchor logic, scripts.
+- **`frontend/`** — Vite/React dashboard, Zerion Agent UI, proof summary UI.
+- **`docs/`** — demo script, quickstart, top-level pointers.
+- **`APROOF/docs/`** — integration, Zerion contract, environment hardening, Solana checklist.
 
-**CI:** push/PR to `main` / `master` runs `.github/workflows/ci.yml` (backend `verify:all`, frontend typecheck + test + build, sandbox template parity script).
+## Presenter script
 
-**Live harness (PowerShell, requires `npm run dev:live` in `APROOF/` on :3101):** from **`APROOF/`**:
+See [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md).
 
-```bash
-npm run test:live
-```
+## Contributing / security / license
 
-**Full harness (repo-root orchestrator):** from repository root, runs fresh PGlite + API `:3000` + live PS1 suite + e2e + stress (and optional Vite proxy checks):
+- [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- [`SECURITY.md`](SECURITY.md)
+- [`LICENSE`](LICENSE) (MIT)
 
-```bash
-npm run harness:full
-```
+## Further reading (deep dives)
 
-`test:live` and `harness:full` are different workflows and use different API ports by default (`:3101` vs `:3000`).
-
-### Proof Detail verification display
-
-In the UI (`/app/proofs` -> open a proof -> **A. Summary**), verification runs automatically per selected proof via `GET /proofs/:proofId/verification`. The summary now appends:
-
-- `Verification`
-- `status` (`loading`, `valid`, `invalid`, `not_anchored`, `error`)
-- result copy (`Verified against anchored root`, `Mismatch with anchored root`, `No anchor found`, or `Verification error`)
-- optional `View Anchor ->` link when `explorer_url` is present
-
-## Deployment (production)
-
-See **`docs/DEPLOYMENT.md`** and optional **`docker-compose.yml`** (example: nginx + SPA + API). This is **not** the local `dev:stack` workflow.
-
-## Official clean release (source-only bundle)
-
-Use this when sharing **reviewer / investor / grant** drops — **not** a zip of your whole machine.
-
-**From the repository root** (not inside `APROOF/`):
-
-```bash
-npm run release:preflight
-npm run release
-```
-
-Or one step:
-
-```bash
-npm run release:pack
-```
-
-- **`release:preflight`** — fails if **git-tracked** `.env` / `.env.*` files (other than `.env.example`) appear under bundle paths. Local untracked `.env` files do **not** fail (normal development).
-- **`release`** — requires a **git checkout**; writes a **source-only** tree to **`tmp/release-bundle/aproof-project/`** (copy excludes `node_modules`, `dist`, secrets, etc., by filter).
-
-**APROOF-only** bundle (subset, same hygiene rules): from **`APROOF/`** use `npm run release:preflight` and `npm run package:clean` / `npm run release:bundle`.
-
-## More detail
-
-- UI ↔ API: `docs/reports/INTEGRATION-REPORT.md`
 - Ports, proxy: `APROOF/docs/INTEGRATION.md`
-- PGlite reset: `APROOF/docs/DEV-DB-RESET.md`
-- Production / ops: `docs/DEPLOYMENT.md`
+- PGlite: `APROOF/docs/DEV-DB-RESET.md`
+- Sandbox: `docs/README.md`, `APROOF/docs/README.md`
+- Deployment (non-local): `docs/DEPLOYMENT.md`
+- Environment hygiene: `APROOF/docs/environment-hardening.md`

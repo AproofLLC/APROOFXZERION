@@ -1,9 +1,10 @@
-# Full local harness: fresh PGlite, API :3000, live PS1 proofs, Vite dev-stack-check (proxy),
+# Full local harness: fresh PGlite, API :3040, live PS1 proofs, Vite dev-stack-check (proxy),
 # then Vitest e2e + stress:inject.
 # Usage (repo root): npm run harness:full
 #   or: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-full-e2e-harness.ps1 [-SkipDevCheck] [-SkipLivePs1] [-SkipE2e]
 param(
-  [int]$ApiPort = 3000,
+  [int]$ApiPort = 3040,
+  [int]$VitePort = 5273,
   [string]$PgliteDataDir = "",
   [switch]$SkipLivePs1,
   [switch]$SkipE2e,
@@ -239,7 +240,7 @@ try {
 cd /d "$frontendRoot"
 set APROOF_PORT=$ApiPort
 set VITE_API_PROXY_TARGET=http://127.0.0.1:$ApiPort
-"$nodeExe" "$viteBin" --host 127.0.0.1 --port 5173 --strictPort >> "$viteLog" 2>&1
+"$nodeExe" "$viteBin" --host 127.0.0.1 --port $VitePort --strictPort >> "$viteLog" 2>&1
 "@
     Set-Content -Path $viteRunnerCmd -Value $viteCmdBody -Encoding ASCII
     $viteProc = $null
@@ -247,7 +248,7 @@ set VITE_API_PROXY_TARGET=http://127.0.0.1:$ApiPort
       $viteProc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "`"$viteRunnerCmd`"" -PassThru -WindowStyle Hidden
       if (-not $viteProc) { throw "Failed to start Vite" }
       try {
-        Wait-HttpOk -Url "http://127.0.0.1:5173/" -MaxSec 120
+        Wait-HttpOk -Url "http://127.0.0.1:$VitePort/" -MaxSec 120
       } catch {
         if (Test-Path $viteLog) {
           Write-Host "[harness] Vite log tail ($viteLog):" -ForegroundColor Yellow
@@ -275,7 +276,7 @@ set VITE_API_PROXY_TARGET=http://127.0.0.1:$ApiPort
       if ($viteProc) {
         Stop-Process -Id $viteProc.Id -Force -ErrorAction SilentlyContinue
       }
-      Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
+      Get-NetTCPConnection -LocalPort $VitePort -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
         Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
       }
     }

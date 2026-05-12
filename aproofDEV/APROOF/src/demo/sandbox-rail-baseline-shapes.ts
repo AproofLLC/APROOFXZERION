@@ -9,6 +9,7 @@ import { baselines } from "../db/schema/index.js";
 import type { RailType } from "../protocol/angle-applicability.js";
 import type { UniversalBaselineTemplate } from "../baselines/baseline-template-types.js";
 import { UNIVERSAL_ANGLES } from "../product/product-proof.js";
+import { ZERION_AGENT_DEMO_POLICY_TAGS } from "./demo-clean-payloads.js";
 
 export const SANDBOX_RAIL_BASELINE_SHAPES: Record<RailType, UniversalBaselineTemplate> = {
   model: {
@@ -208,6 +209,20 @@ export const SANDBOX_RAIL_BASELINE_SHAPES: Record<RailType, UniversalBaselineTem
   },
 };
 
+/** Single-subject Zerion Agent demo: agent rail + scoped Solana devnet policy tags + execution stack. */
+export const ZERION_AGENT_DEMO_SANDBOX_SHAPES: UniversalBaselineTemplate = {
+  ...SANDBOX_RAIL_BASELINE_SHAPES.agent,
+  policy_integrity: {
+    type: "policy_integrity_v1",
+    required_tags: [...ZERION_AGENT_DEMO_POLICY_TAGS],
+  },
+  cross_system_integrity: {
+    type: "cross_system_integrity_v1",
+    expected_systems: ["zerion_cli_fork", "zerion_api", "solana_devnet", "aproof_ingest"],
+    require_all_systems: true,
+  },
+};
+
 /** Sandbox/demo ingests use fixed historical `occurred_at` timestamps; baselines must be effective at those times. */
 const SANDBOX_BASELINE_EFFECTIVE_FROM = new Date("1970-01-01T00:00:00.000Z");
 
@@ -216,16 +231,23 @@ const SANDBOX_BASELINE_EFFECTIVE_FROM = new Date("1970-01-01T00:00:00.000Z");
  * If a baseline row already exists it is updated; if not, one is inserted with
  * `enabled: true` and the full evaluator-shaped definition from the rail template.
  */
-export async function applySandboxRailBaselineShapes(
+export async function applyZerionAgentDemoBaselineShapes(
+  db: Db,
+  params: { organizationId: string; environmentId: string; subjectId: string },
+): Promise<void> {
+  await applySandboxBaselineShapesFromTemplate(db, { ...params, template: ZERION_AGENT_DEMO_SANDBOX_SHAPES });
+}
+
+async function applySandboxBaselineShapesFromTemplate(
   db: Db,
   params: {
     organizationId: string;
     environmentId: string;
     subjectId: string;
-    rail: RailType;
+    template: UniversalBaselineTemplate;
   },
 ): Promise<void> {
-  const template = SANDBOX_RAIL_BASELINE_SHAPES[params.rail];
+  const template = params.template;
   for (const angle of UNIVERSAL_ANGLES) {
     const shape = template[angle as keyof UniversalBaselineTemplate] as Record<string, unknown>;
     const [row] = await db
@@ -270,4 +292,19 @@ export async function applySandboxRailBaselineShapes(
       });
     }
   }
+}
+
+export async function applySandboxRailBaselineShapes(
+  db: Db,
+  params: {
+    organizationId: string;
+    environmentId: string;
+    subjectId: string;
+    rail: RailType;
+  },
+): Promise<void> {
+  await applySandboxBaselineShapesFromTemplate(db, {
+    ...params,
+    template: SANDBOX_RAIL_BASELINE_SHAPES[params.rail],
+  });
 }

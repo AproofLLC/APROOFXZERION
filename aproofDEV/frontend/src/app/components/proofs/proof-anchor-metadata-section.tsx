@@ -1,5 +1,6 @@
 import type { ProductProof } from "../../../api/types";
 import { normalizeAnchorMetadataFromApi, shortHash } from "../../../api/anchor-metadata";
+import { zerionExecutionExplorerUrlFromTxHash } from "../../../api/zerion-execution-explorer-url";
 import { Badge } from "../ui/badge";
 import { TruthRow, TruthSection, truthJson, truthScalar } from "./truth-display";
 
@@ -48,6 +49,13 @@ export function ProofAnchorMetadataSection({
             ? "Anchor disabled"
             : "Not anchored yet";
   const explorerDisplayHref = pp?.anchor_explorer_url?.trim() || meta.explorer_url?.trim() || null;
+  const zerionExecUrl =
+    pp?.zerion_execution_explorer_url?.trim() ||
+    (typeof canonical.zerion_execution_explorer_url === "string" ? canonical.zerion_execution_explorer_url.trim() : "") ||
+    zerionExecutionExplorerUrlFromTxHash(
+      pp?.zerion_tx_hash ?? (typeof canonical.zerion_tx_hash === "string" ? canonical.zerion_tx_hash : null),
+    );
+  const execUrlDisplay = zerionExecUrl && zerionExecUrl.length > 0 ? zerionExecUrl : null;
   return (
     <TruthSection title={variant === "inline" ? "Anchor metadata" : "G. Anchor metadata"}>
       {!pp ? (
@@ -91,6 +99,7 @@ export function ProofAnchorMetadataSection({
             label="tx_signature"
             value={truthScalar(meta.tx_signature ? shortHash(meta.tx_signature) : "No Solana transaction")}
           />
+          <TruthRow label="anchor_signature" value={truthScalar(pp.anchor_tx_hash ?? meta.tx_signature ?? null)} />
           <TruthRow
             label="wallet_public_key"
             value={truthScalar(meta.wallet_public_key ? shortHash(meta.wallet_public_key) : "Not anchored yet")}
@@ -101,18 +110,52 @@ export function ProofAnchorMetadataSection({
             label="error_message"
             value={truthScalar(meta.error_message ? `Anchor failed: ${meta.error_message}` : null)}
           />
+          {variant === "full" ? (
+            <p className="text-[11px] text-muted-foreground mb-2 leading-relaxed">
+              The Zerion Agent executes the autonomous transaction. AProof independently anchors the resulting
+              deterministic proof/root hash to Solana devnet.
+            </p>
+          ) : null}
           <TruthRow
-            label="explorer_url"
+            label="Execution transaction (Zerion Agent)"
+            value={truthScalar(
+              pp.zerion_tx_hash && pp.zerion_tx_hash.trim().length >= 32
+                ? pp.zerion_tx_hash
+                : typeof canonical.zerion_tx_hash === "string" && canonical.zerion_tx_hash.trim().length >= 32
+                  ? canonical.zerion_tx_hash
+                  : "No execution tx yet.",
+            )}
+          />
+          <TruthRow
+            label="Execution tx explorer"
             value={
-              explorerDisplayHref ? (
-                <a className="underline" href={explorerDisplayHref} target="_blank" rel="noreferrer">
-                  View on Solana Explorer →
+              execUrlDisplay ? (
+                <a className="underline" href={execUrlDisplay} target="_blank" rel="noreferrer">
+                  View execution on Solana Explorer →
                 </a>
               ) : (
-                truthScalar("No Solana transaction")
+                truthScalar("—")
               )
             }
           />
+          {variant === "full" ? (
+            <p className="text-[11px] text-muted-foreground mb-2">Execution transaction = autonomous Zerion Agent action.</p>
+          ) : null}
+          <TruthRow
+            label="Anchor proof explorer"
+            value={
+              explorerDisplayHref ? (
+                <a className="underline" href={explorerDisplayHref} target="_blank" rel="noreferrer">
+                  View anchor on Solana Explorer →
+                </a>
+              ) : (
+                truthScalar("No proof anchor yet.")
+              )
+            }
+          />
+          {variant === "full" ? (
+            <p className="text-[11px] text-muted-foreground mb-2">Proof anchor = deterministic AProof proof/root hash anchor.</p>
+          ) : null}
           <TruthRow label="anchor_batch_id" value={truthScalar(pp.anchor_batch_id ?? meta.batch_id)} />
           {meta.proof_ids.length > 0 ? (
             <div className="pt-2">
@@ -140,6 +183,10 @@ export function ProofAnchorMetadataSection({
             <TruthRow label="solana_sandbox" value="— (not linked / not on solana-sandbox batch yet)" />
           )}
           <TruthRow label="proof_digest" value={truthScalar(pp.proof_digest)} />
+          <TruthRow
+            label="operational.runtime_error"
+            value={truthScalar(pp.operational_runtime_error ?? canonical.operational_runtime_error ?? null)}
+          />
         </>
       )}
     </TruthSection>

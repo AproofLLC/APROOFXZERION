@@ -1,4 +1,4 @@
-/** Display order for multi-subject Demo Mode (matches backend `DEMO_SUBJECT_RAIL_ORDER`). */
+/** Legacy rail labels for the demo perspective control (inactive when only the Zerion Agent subject is seeded). */
 export const DEMO_RAIL_OPTIONS = [
   { rail: "model", label: "Model" },
   { rail: "agent", label: "Agent" },

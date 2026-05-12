@@ -86,7 +86,21 @@ async function main(): Promise<void> {
     });
     if (r.statusCode !== 200) failRoute("GET /subjects/:id/overview", "200", r.statusCode, r.payload);
 
-    console.log("[verify] 7. POST /auth/sign-out …");
+    console.log("[verify] 7. GET /subjects/:id/zerion-agent-summary …");
+    r = await app.inject({
+      method: "GET",
+      url: `/subjects/${sid}/zerion-agent-summary`,
+      headers: { cookie: sessionCookie },
+    });
+    if (r.statusCode !== 200) {
+      failRoute("GET /subjects/:id/zerion-agent-summary", "200", r.statusCode, r.payload);
+    }
+    const za = JSON.parse(r.payload) as { transactions?: unknown };
+    if (!Array.isArray(za.transactions)) {
+      failRoute("GET /subjects/:id/zerion-agent-summary", "transactions[]", r.statusCode, r.payload);
+    }
+
+    console.log("[verify] 8. POST /auth/sign-out …");
     r = await app.inject({
       method: "POST",
       url: "/auth/sign-out",
@@ -96,7 +110,7 @@ async function main(): Promise<void> {
     if (r.statusCode !== 200) failRoute("POST /auth/sign-out", "200", r.statusCode, r.payload);
 
     console.log(
-      "[verify] PASS — all 7 checks succeeded (session unauthenticated → sign-up → session → subjects → overview → sign-out)."
+      "[verify] PASS — all checks succeeded (session unauthenticated → sign-up → session → subjects → overview → zerion-agent-summary → sign-out)."
     );
   } finally {
     await app.close();

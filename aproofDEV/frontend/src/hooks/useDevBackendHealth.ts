@@ -66,7 +66,7 @@ export function devHealthUserMessage(q: ReturnType<typeof useDevBackendHealth>):
   return (
     "Cannot reach the API through the Vite dev server — run npm run dev:stack from the repo root " +
     "(or cd APROOF && npm run dev plus cd frontend && npm run dev), then npm run dev:check. " +
-    "If you start Vite alone, set APROOF_PORT to the API port or VITE_API_PROXY_TARGET (do not rely on a shell PORT=5173). " +
+    "If you start Vite alone, set VITE_API_PORT or APROOF_PORT to the API port, or VITE_API_PROXY_TARGET to a full URL (shell PORT is the Vite dev port — do not use it as the API proxy target). " +
     "Local dev uses the proxy only; do not open the API URL directly in the browser." +
     detail
   );

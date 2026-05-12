@@ -4,9 +4,9 @@ services:
   api:
     build: ./APROOF
     ports:
-      - "3000:3000"
+      - "3040:3040"
     environment:
-      PORT: "3000"
+      PORT: "3040"
     # For Postgres: set APROOF_DB_MODE=postgres and DATABASE_URL (see APROOF/.env.example).
 
   web:

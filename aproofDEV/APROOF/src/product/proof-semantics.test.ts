@@ -29,6 +29,7 @@ function basePipeline(overrides: Partial<ProcessEventSuccess> = {}): ProcessEven
     event_id: eventId,
     canonical_event_type: "policy_checked",
     subject_rail: "service",
+    subject_external_key: null,
     proof_units: [],
     failure_locators_created: 0,
     lineage_anomaly: null,

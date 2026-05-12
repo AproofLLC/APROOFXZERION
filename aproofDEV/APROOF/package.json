@@ -37,6 +37,9 @@
     "test:watch": "vitest",
     "stress:api": "node scripts/stress-api-load.mjs",
     "stress:inject": "vitest run e2e/stress-inject-burst.e2e.test.ts",
+    "devnet:wallet:bootstrap": "node scripts/bootstrap-devnet-wallet.mjs",
+    "zerion:wallet:generate": "node scripts/generate-zerion-agent-wallet.mjs",
+    "zerion:readiness": "node scripts/check-zerion-live-readiness.mjs",
     "verify:package": "npm run typecheck && npm run build && npm run test",
     "verify:all": "npm run typecheck && npm run build && npm run test && npm run test:e2e && npm run stress:inject"
   },

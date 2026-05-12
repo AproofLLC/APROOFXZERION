@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-const PREFIX_KEYS = ["overview", "proofs", "events", "failures", "lineages"] as const;
+const PREFIX_KEYS = ["overview", "proofs", "events", "failures", "lineages", "zerion-agent-summary"] as const;
 
 /**
  * Await refetch of subject-scoped queries so the demo shell can settle after sandbox reset

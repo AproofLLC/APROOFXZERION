@@ -13,6 +13,7 @@
 
 import type { FailureRollup } from "../product/failure-intelligence.js";
 import type { ProductAngleResult, ProductProof, Severity } from "../product/product-proof.js";
+import { zerionExecutionExplorerUrlFromTxHash } from "../zerion/zerion-execution-explorer-url.js";
 import { normalizeAnchorMetadata } from "./anchor-metadata-normalizer.js";
 
 function normalizeAngleForApi(a: ProductAngleResult): ProductAngleResult {
@@ -34,11 +35,14 @@ function normalizeAngleForApi(a: ProductAngleResult): ProductAngleResult {
  */
 export function finalizeProductProofForApiResponse(pp: ProductProof): ProductProof {
   const flags = [...pp.flags].sort((a, b) => a.flag_id.localeCompare(b.flag_id));
+  const zerion_execution_explorer_url =
+    pp.zerion_execution_explorer_url ?? zerionExecutionExplorerUrlFromTxHash(pp.zerion_tx_hash);
   return {
     ...pp,
     flags,
     flags_count: flags.length,
     angles: pp.angles.map(normalizeAngleForApi),
+    zerion_execution_explorer_url,
   };
 }
 
@@ -164,6 +168,11 @@ export function attachFrontendProofEnvelopeFields(envelope: Record<string, unkno
     anchor_payload: pp.anchor_payload ?? null,
     anchor_tx_hash: canonical.tx_signature,
     anchor_timestamp: pp.anchor_timestamp ?? null,
+    zerion_tx_hash: pp.zerion_tx_hash ?? null,
+    zerion_recipient_address: pp.zerion_recipient_address ?? null,
+    zerion_execution_explorer_url: pp.zerion_execution_explorer_url ?? null,
+    operational_execution_status: pp.operational_execution_status ?? null,
+    operational_runtime_error: pp.operational_runtime_error ?? null,
     solana_sandbox: ss,
     network_family: ss ? "Solana" : null,
     route: ss?.route ?? null,

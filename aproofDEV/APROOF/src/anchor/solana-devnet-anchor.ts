@@ -91,16 +91,16 @@ export async function loadAnchorKeypairFromPath(keypairPath: string): Promise<Ke
   try {
     raw = await readFile(keypairPath, "utf8");
   } catch {
-    throw new Error("SOLANA_CONFIG_INVALID: SOLANA_KEYPAIR_PATH does not exist or is not readable.");
+    throw new Error("SOLANA_DEVNET_KEYPAIR_INVALID");
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error("SOLANA_CONFIG_INVALID: keypair file is not valid JSON.");
+    throw new Error("SOLANA_DEVNET_KEYPAIR_INVALID");
   }
   if (!Array.isArray(parsed) || parsed.length !== 64 || parsed.some((n) => !Number.isInteger(n))) {
-    throw new Error("SOLANA_CONFIG_INVALID: keypair file must be a 64-byte integer array.");
+    throw new Error("SOLANA_DEVNET_KEYPAIR_INVALID");
   }
   return Keypair.fromSecretKey(Uint8Array.from(parsed as number[]));
 }
@@ -110,7 +110,7 @@ export async function loadOrCreateAnchorKeypair(config: SolanaDevnetConfig): Pro
     return loadAnchorKeypairFromPath(config.keypairPathAbsolute);
   }
   if (!config.autoCreateDevnetWallet) {
-    throw new Error("SOLANA_CONFIG_INVALID: keypair missing and SOLANA_AUTOCREATE_DEVNET_WALLET is false.");
+    throw new Error("SOLANA_DEVNET_KEYPAIR_INVALID");
   }
   const keypair = Keypair.generate();
   await mkdir(path.dirname(config.keypairPathAbsolute), { recursive: true });
@@ -154,25 +154,35 @@ export async function ensureDevnetBalanceLamports(
   keypair: Keypair,
   config: SolanaDevnetConfig,
 ): Promise<number> {
-  const balance = await connection.getBalance(keypair.publicKey, "confirmed");
+  let balance: number;
+  try {
+    balance = await connection.getBalance(keypair.publicKey, "confirmed");
+  } catch {
+    throw new Error("SOLANA_DEVNET_RPC_UNAVAILABLE");
+  }
   if (balance >= config.minBalanceLamports) return balance;
   if (!config.autoAirdropDevnet) {
-    throw new Error(
-      `SOLANA_ANCHOR_FAILED: wallet balance ${balance} below SOLANA_MIN_BALANCE_LAMPORTS=${config.minBalanceLamports} and SOLANA_AUTO_AIRDROP_DEVNET=false.`,
-    );
+    throw new Error("SOLANA_DEVNET_WALLET_UNFUNDED");
   }
   let sig: string;
   try {
     sig = await connection.requestAirdrop(keypair.publicKey, 1 * LAMPORTS_PER_SOL);
     await connection.confirmTransaction(sig, "confirmed");
-  } catch {
-    throw new Error("SOLANA_ANCHOR_FAILED: devnet airdrop request/confirmation failed.");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/429|rate|too many|fetch failed/i.test(msg)) {
+      throw new Error("SOLANA_DEVNET_RPC_UNAVAILABLE");
+    }
+    throw new Error("SOLANA_DEVNET_ANCHOR_FAILED");
   }
-  const recheckedBalance = await connection.getBalance(keypair.publicKey, "confirmed");
+  let recheckedBalance: number;
+  try {
+    recheckedBalance = await connection.getBalance(keypair.publicKey, "confirmed");
+  } catch {
+    throw new Error("SOLANA_DEVNET_RPC_UNAVAILABLE");
+  }
   if (recheckedBalance < config.minBalanceLamports) {
-    throw new Error(
-      `SOLANA_ANCHOR_FAILED: wallet balance remains ${recheckedBalance} after airdrop; requires >=${config.minBalanceLamports}.`,
-    );
+    throw new Error("SOLANA_DEVNET_WALLET_UNFUNDED");
   }
   return recheckedBalance;
 }
@@ -188,7 +198,12 @@ export async function submitSolanaDevnetMemo(params: {
     console.info(`[anchor] Loaded wallet: ${keypair.publicKey.toBase58()}`);
     console.info(`[anchor] Connecting to: ${params.config.rpcUrl}`);
   }
-  const connection = new Connection(params.config.rpcUrl, "confirmed");
+  let connection: Connection;
+  try {
+    connection = new Connection(params.config.rpcUrl, "confirmed");
+  } catch {
+    throw new Error("SOLANA_DEVNET_RPC_UNAVAILABLE");
+  }
   await ensureDevnetBalanceLamports(connection, keypair, params.config);
   const memoPayload = buildCanonicalMemoPayload(params);
   if (ANCHOR_DEBUG) {
@@ -213,11 +228,15 @@ export async function submitSolanaDevnetMemo(params: {
     signature = await sendAndConfirmTransaction(connection, transaction, [keypair], {
       commitment: "confirmed",
     });
-  } catch {
-    throw new Error("SOLANA_ANCHOR_FAILED: Solana memo transaction failed to confirm.");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/429|rate|too many|fetch failed|timeout/i.test(msg)) {
+      throw new Error("SOLANA_DEVNET_RPC_UNAVAILABLE");
+    }
+    throw new Error("SOLANA_DEVNET_ANCHOR_FAILED");
   }
   if (!signature) {
-    throw new Error("SOLANA_ANCHOR_FAILED: tx_signature missing from Solana memo transaction.");
+    throw new Error("SOLANA_DEVNET_SIGNATURE_MISSING");
   }
   const confirmation_status = "confirmed";
   if (ANCHOR_DEBUG) {

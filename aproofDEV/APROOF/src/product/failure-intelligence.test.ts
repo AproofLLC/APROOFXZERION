@@ -89,6 +89,7 @@ describe("failure intelligence", () => {
       event_id: "e",
       canonical_event_type: "action_completed",
       subject_rail: "service",
+      subject_external_key: null,
       proof_units: [
         {
           proof_id: "p-pol",

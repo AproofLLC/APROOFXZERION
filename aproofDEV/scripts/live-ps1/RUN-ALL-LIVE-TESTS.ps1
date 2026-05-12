@@ -1,6 +1,6 @@
-﻿# Run every live script in order. Set APROOF_URL if not using default :3000.
+﻿# Run every live script in order. Set APROOF_URL if not using default :3040.
 param(
-  [string]$BaseUrl = $(if ($env:APROOF_URL) { $env:APROOF_URL } else { "http://127.0.0.1:3000" })
+  [string]$BaseUrl = $(if ($env:APROOF_URL) { $env:APROOF_URL } else { "http://127.0.0.1:3040" })
 )
 $env:APROOF_URL = $BaseUrl.TrimEnd('/')
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

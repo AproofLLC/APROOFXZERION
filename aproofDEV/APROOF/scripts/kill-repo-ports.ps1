@@ -1,7 +1,7 @@
 # Kill any process listening on common local dev ports for this stack.
 # Run from the APROOF directory: npm run kill:ports
 $ErrorActionPreference = "SilentlyContinue"
-$ports = @(3000, 3001, 3101, 4173)
+$ports = @(3000, 3001, 3040, 3101, 4173, 4273, 5173, 5273)
 $stopped = New-Object System.Collections.Generic.List[string]
 
 foreach ($port in $ports) {

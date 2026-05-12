@@ -57,6 +57,10 @@ function minimalProductProof(angles: ProductProof["angles"]): ProductProof {
     canonical_hash: "ch",
     artifact_hash: "ah",
     occurrence_hash: "oh",
+    zerion_tx_hash: null,
+    zerion_recipient_address: null,
+    zerion_execution_explorer_url: null,
+    operational_runtime_error: null,
   };
 }
 
@@ -152,6 +156,7 @@ describe("proof digest determinism", () => {
       "lineage_status",
       "matched_prior_event_id",
       "occurrence_hash",
+      "operational_runtime_error",
       "org_id",
       "policy_version",
       "proof_id",
@@ -164,6 +169,19 @@ describe("proof digest determinism", () => {
       "subject_id",
       "subject_type",
       "verifier_version",
+      "zerion_recipient_address",
+      "zerion_tx_hash",
     ]);
+  });
+
+  it("ignores zerion_execution_explorer_url for digest (derived / non-hashable)", () => {
+    const base = minimalProductProof(sevenAngleStub());
+    const withUrl: ProductProof = {
+      ...base,
+      zerion_execution_explorer_url: "https://explorer.solana.com/tx/fake?cluster=devnet",
+    };
+    expect(computeProofDigest(toHashableProofPayload(base))).toBe(
+      computeProofDigest(toHashableProofPayload(withUrl)),
+    );
   });
 });

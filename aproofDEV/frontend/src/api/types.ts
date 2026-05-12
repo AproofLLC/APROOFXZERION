@@ -59,6 +59,9 @@ export type SubjectOverview = {
     flags: number;
     delta_detected: boolean;
     anchor_status: string | null;
+    zerion_tx_hash?: string | null;
+    zerion_recipient_address?: string | null;
+    zerion_execution_explorer_url?: string | null;
   };
   angles_summary: Array<{ angle: string; status: string; reason_code: string }>;
   recent_events: Array<{
@@ -167,6 +170,14 @@ export type ProductProof = {
     simulated_commitment: string;
     external_attested: false;
   } | null;
+  /** Ingest payload `zerion.tx_hash` when present (on-chain execution ref). */
+  zerion_tx_hash?: string | null;
+  /** Ingest payload `zerion.recipient_address` when present (execution route continuity). */
+  zerion_recipient_address?: string | null;
+  /** Derived Solana explorer URL for `zerion_tx_hash` (execution), not the proof anchor tx. */
+  zerion_execution_explorer_url?: string | null;
+  operational_execution_status?: string | null;
+  operational_runtime_error?: string | null;
   created_at: string;
   updated_at?: string;
   verifier_version?: string;
@@ -478,4 +489,105 @@ export type SubjectUserLogsResponse = {
   items?: SubjectUserLog[];
   /** Legacy compatibility */
   next_cursor?: string;
+};
+
+export type ZerionReadinessSnapshot = {
+  ok: true;
+  sandbox: boolean;
+  zerion_api_key_present: boolean;
+  zerion_cli_path_present: boolean;
+  zerion_cli_path_exists: boolean;
+  zerion_cli_path_is_file: boolean;
+  zerion_wallet_address_present: boolean;
+  solana_rpc_url_present: boolean;
+  solana_keypair_path_present: boolean;
+  solana_keypair_path_exists: boolean;
+  solana_keypair_path_is_file: boolean;
+  solana_anchor_mode_devnet: boolean;
+  anchor_balance_ready: boolean;
+  solana_balance_lamports: number | null;
+  solana_balance_sol: number | null;
+  wallet_public_address: string | null;
+  agent_execution_wallet_balance_lamports: number | null;
+  agent_execution_wallet_balance_sol: number | null;
+  allowed_chain: string;
+  max_spend_usd: number;
+  approved_assets: string[];
+  aproof_subject_id: string;
+  aproof_env: string;
+  agent_wallet_public_address: string | null;
+  zerion_cli_is_stub_path: boolean;
+  execution_ready: boolean;
+  anchor_ready: boolean;
+  integration_ready: boolean;
+  missing: string[];
+  set_execution_wallet_help: string | null;
+  fund_execution_wallet_help: string | null;
+  what_is_working: string[];
+  what_is_next: string[];
+  zerion_agent_keypair_present: boolean;
+  zerion_agent_keypair_exists: boolean;
+  zerion_agent_keypair_is_file: boolean;
+  zerion_agent_balance_sol: number | null;
+  zerion_agent_keypair_help: string | null;
+  local_devnet_executor_notice: string | null;
+  live_solana_devnet_execution_enabled: boolean;
+  local_devnet_executor_path_active: boolean;
+  zerion_cli_path_env_explicit: boolean;
+  zerion_agent_wallet_env_explicit: boolean;
+  execution_wallet_balance_unavailable: boolean;
+  anchor_wallet_balance_unavailable: boolean;
+  execution_readiness_blocker: string | null;
+  anchor_readiness_blocker: string | null;
+  integration_readiness_blocker: string | null;
+  readiness_detail: {
+    zerion_api_key: "present" | "missing";
+    solana_rpc_url: "present" | "missing";
+    zerion_cli: "found" | "missing";
+    zerion_agent_wallet: "present" | "derived" | "missing";
+    zerion_agent_keypair_file: "found" | "missing";
+    anchor_devnet_gate: "active" | "inactive";
+    solana_anchor_keypair_file: "found" | "missing";
+  };
+};
+
+export type ZerionAgentTransactionRow = {
+  event_id: string;
+  event_lineage_id: string;
+  event_version: number;
+  timestamp: string;
+  scenario: string;
+  status: string;
+  chain: string;
+  asset: string;
+  amount_usd: number;
+  wallet_address: string;
+  recipient_address: string | null;
+  execution_source: string;
+  cli_invoked: boolean;
+  execution_attempted: boolean;
+  execution_simulated: boolean;
+  tx_hash: string | null;
+  proof_id: string | null;
+  proof_digest: string;
+  anchor_status: string | null;
+  anchor_signature: string | null;
+  explorer_url: string | null;
+  /** Solana explorer for `tx_hash` (Zerion Agent execution), not the AProof anchor. */
+  execution_explorer_url: string | null;
+  runtime_error: string | null;
+  failure_reason_code: string | null;
+  policy_result?: string | null;
+  policy_reason_code?: string | null;
+};
+
+export type ZerionAgentSummaryResponse = {
+  subject: Record<string, unknown>;
+  readiness: ZerionReadinessSnapshot;
+  policies: {
+    allowed_chain: string;
+    max_spend_usd: number;
+    approved_assets: string[];
+  };
+  transactions: ZerionAgentTransactionRow[];
 };

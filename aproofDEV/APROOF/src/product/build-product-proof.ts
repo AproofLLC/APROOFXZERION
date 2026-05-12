@@ -24,6 +24,7 @@ import { deriveAllAngleBaselines } from "../baselines/baseline-registry.js";
 import { SOLANA_SANDBOX_ROUTE } from "../anchor/sandbox-anchor-constants.js";
 import { REASON_CODE } from "../protocol/proof-vocabulary.js";
 import { resolveAngleOutcomeSemantics, deriveProofSufficiency } from "./proof-semantic-law.js";
+import { zerionExecutionExplorerUrlFromTxHash } from "../zerion/zerion-execution-explorer-url.js";
 
 export const DEFAULT_CANONICALIZATION_VERSION = "0.1.0";
 
@@ -196,6 +197,51 @@ function readPayloadString(payload: unknown, key: string): string | null {
   if (payload === null || typeof payload !== "object") return null;
   const v = (payload as Record<string, unknown>)[key];
   return typeof v === "string" && v.trim() ? v : null;
+}
+
+function readPayloadZerionTxHash(payload: unknown): string | null {
+  if (payload === null || typeof payload !== "object") return null;
+  const z = (payload as Record<string, unknown>).zerion;
+  if (z === null || typeof z !== "object") return null;
+  const th = (z as Record<string, unknown>).tx_hash;
+  if (typeof th !== "string") return null;
+  const t = th.trim();
+  return t.length >= 32 ? t : null;
+}
+
+function readPayloadZerionRecipientAddress(payload: unknown): string | null {
+  if (payload === null || typeof payload !== "object") return null;
+  const z = (payload as Record<string, unknown>).zerion;
+  if (z === null || typeof z !== "object") return null;
+  const recipient = (z as Record<string, unknown>).recipient_address;
+  if (typeof recipient !== "string") return null;
+  const t = recipient.trim();
+  return t.length >= 32 ? t : null;
+}
+
+function readPayloadOperationalExecution(payload: unknown): {
+  execution_status: string | null;
+  runtime_error: string | null;
+} {
+  if (payload === null || typeof payload !== "object") {
+    return { execution_status: null, runtime_error: null };
+  }
+  const op = (payload as Record<string, unknown>).operational;
+  if (op === null || typeof op !== "object") {
+    return { execution_status: null, runtime_error: null };
+  }
+  const o = op as Record<string, unknown>;
+  const es = o.execution_status;
+  const re = o.runtime_error;
+  return {
+    execution_status: typeof es === "string" && es.trim() ? es.trim() : null,
+    runtime_error:
+      re === null || re === undefined
+        ? null
+        : typeof re === "string"
+          ? re.trim() || null
+          : null,
+  };
 }
 
 function applyBaseline(
@@ -757,6 +803,7 @@ export function buildProductProof(input: BuildProductProofInput): ProductProof {
   );
   const baselineMap = deriveAllAngleBaselines({
     subjectType: mapRailToSubjectType(pipeline.subject_rail),
+    subjectExternalKey: pipeline.subject_external_key,
     canonicalEvent: {
       payload: (body.payload ?? {}) as Record<string, unknown>,
       trace_id: body.trace_id,
@@ -808,6 +855,9 @@ export function buildProductProof(input: BuildProductProofInput): ProductProof {
 
   const receivedIso = receivedAt.toISOString();
   const subject_type = mapRailToSubjectType(pipeline.subject_rail);
+  const opExec = readPayloadOperationalExecution(body.payload);
+  const zerionTx = readPayloadZerionTxHash(body.payload);
+  const zerionRecipient = readPayloadZerionRecipientAddress(body.payload);
 
   const draft: ProductProof = {
     proof_id,
@@ -845,6 +895,11 @@ export function buildProductProof(input: BuildProductProofInput): ProductProof {
     anchor_tx_hash: null,
     anchor_timestamp: null,
     solana_sandbox: null,
+    zerion_tx_hash: zerionTx,
+    zerion_recipient_address: zerionRecipient,
+    zerion_execution_explorer_url: zerionExecutionExplorerUrlFromTxHash(zerionTx),
+    operational_execution_status: opExec.execution_status,
+    operational_runtime_error: opExec.runtime_error,
     created_at: receivedIso,
     updated_at: receivedIso,
 

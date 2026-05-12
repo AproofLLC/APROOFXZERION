@@ -1,6 +1,28 @@
-import "dotenv/config";
+import "./config/load-aproof-env.js";
 import { resolveListenPortFromEnv, formatListenPortLogSuffix } from "./config/runtime-env.js";
+import { resolveAproofPackageRoot } from "./config/aproof-package-root.js";
 import { buildServer } from "./http/server.js";
+
+function logAproofEnvGateDebug(): void {
+  if (process.env.APROOF_DEBUG_ENV_KEYS !== "1") return;
+  const e = process.env;
+  const p = (k: string) => `${k} present: ${Boolean(e[k]?.trim())}`;
+  console.log(
+    `[env-gate] ${[
+      p("ZERION_API_KEY"),
+      p("SOLANA_RPC_URL"),
+      p("ZERION_AGENT_WALLET_ADDRESS"),
+      p("ZERION_AGENT_KEYPAIR_PATH"),
+      p("ZERION_CLI_PATH"),
+      p("SOLANA_KEYPAIR_PATH"),
+      p("ANCHOR_MODE"),
+      p("APROOF_ENV"),
+    ].join(" | ")}`,
+  );
+  console.log(`[env-gate] APROOF package root (path resolution): ${resolveAproofPackageRoot()}`);
+}
+
+logAproofEnvGateDebug();
 
 const mode = process.env.APROOF_DB_MODE?.trim().toLowerCase();
 const { port, source: portSource } = resolveListenPortFromEnv();

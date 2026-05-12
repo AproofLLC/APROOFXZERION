@@ -5,6 +5,7 @@ import {
   failureLocatorRecords,
   proofUnits,
   rawEvents,
+  subjects,
 } from "../db/schema/index.js";
 import { buildFailureRollup } from "../product/failure-intelligence.js";
 import { buildProductProof } from "../product/build-product-proof.js";
@@ -263,6 +264,12 @@ export async function reconstructEventProofEnvelope(
     body
   );
 
+  const [subRow] = await db
+    .select({ externalKey: subjects.externalKey })
+    .from(subjects)
+    .where(eq(subjects.id, ce.subjectId))
+    .limit(1);
+
   const pipeline: ProcessEventSuccess = {
     ok: true,
     source_type_key: body.source_type_key,
@@ -270,6 +277,7 @@ export async function reconstructEventProofEnvelope(
     event_id: ce.eventId,
     canonical_event_type: ce.eventType,
     subject_rail: ce.railType as RailType,
+    subject_external_key: subRow?.externalKey ?? null,
     proof_units,
     failure_locators_created: Number(flRow?.c ?? 0),
     lineage_anomaly: null,

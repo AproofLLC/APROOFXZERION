@@ -21,9 +21,9 @@ describe("resolveListenPortFromEnv", () => {
     expect(r.source).toBe("PORT");
   });
 
-  it("defaults to 3000", () => {
+  it("defaults to 3040", () => {
     const r = resolveListenPortFromEnv({} as NodeJS.ProcessEnv);
-    expect(r).toEqual({ port: 3000, source: "default" });
+    expect(r).toEqual({ port: 3040, source: "default" });
   });
 
   it("ignores empty PORT and falls through", () => {

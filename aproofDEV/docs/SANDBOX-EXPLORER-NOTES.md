@@ -8,7 +8,7 @@ This note is for **exploring the sandbox in the product** (browser + API): what 
 
 - **Testnet workspace:** a real org and environment with `environment_mode: testnet`, session cookie (`aproof_session`), and the **same** proof pipeline as production (`processEvent`, baselines, proof units, failures, lineages).
 - **No fake proof engine:** scenarios create subjects and ingest events through the normal path; outcomes come from evaluators and stored proof rows.
-- **Browser entry:** use the Vite app (for example `http://127.0.0.1:5173`) so requests go through the **proxy** to the API. Opening the API port directly in the browser bypasses the SPA and proxy and is not supported for the demo shell.
+- **Browser entry:** use the Vite app (for example `http://127.0.0.1:5273`) so requests go through the **proxy** to the API. Opening the API port directly in the browser bypasses the SPA and proxy and is not supported for the demo shell.
 
 ---
 

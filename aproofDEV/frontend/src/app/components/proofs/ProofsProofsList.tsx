@@ -9,6 +9,7 @@ import type {
   ProductProof,
 } from "../../../api/types";
 import { apiFetch } from "../../../api/client";
+import { zerionExecutionExplorerUrlFromTxHash } from "../../../api/zerion-execution-explorer-url";
 import { ProofAnchorMetadataSection } from "./proof-anchor-metadata-section";
 import { SESSION_PENDING_PROOF_ID_KEY } from "../../../constants/storage-keys";
 import { baselineUxState, explainAngleReasonCode } from "../../../util/proof-explanations";
@@ -38,6 +39,8 @@ import {
   truthNotOnResponse,
   truthScalar,
 } from "./truth-display";
+import { getAngleExplanation } from "../../lib/angle-explanations";
+import { AngleJudgeNarrative } from "../../lib/angle-judge-narrative";
 
 /** List selection key for GET /proofs/:id — prefer primary `proof_id` (policy unit) over `event_id` so UI matches Traceability. */
 function proofIdFromListSummary(item: ProofListItem): string | null {
@@ -402,6 +405,15 @@ function SummarySection({ pp }: { pp: ProductProof | undefined }) {
     [pp, verification],
   );
 
+  const executionExplorerHref = useMemo(() => {
+    if (pp == null) return null;
+    return pp.zerion_execution_explorer_url?.trim() || zerionExecutionExplorerUrlFromTxHash(pp.zerion_tx_hash);
+  }, [pp]);
+
+  const TX_NOTE = "Execution transaction = autonomous Zerion Agent action.";
+  const ANCHOR_NOTE = "Proof anchor = deterministic AProof proof/root hash anchor.";
+  const JUDGE_TX_COPY =
+    "The Zerion Agent executes the autonomous transaction. AProof independently anchors the resulting deterministic proof/root hash to Solana devnet.";
   return (
     <TruthSection title="A. Summary">
       {!pp ? (
@@ -424,6 +436,53 @@ function SummarySection({ pp }: { pp: ProductProof | undefined }) {
           <TruthRow label="event_type" value={truthScalar(pp.event_type)} />
           <TruthRow label="verification_source" value={truthScalar(pp.verifier_version)} />
           <TruthRow label="proof_digest" value={truthScalar(pp.proof_digest)} />
+          <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">{JUDGE_TX_COPY}</p>
+          <div className="text-xs text-muted-foreground mb-1">Execution (Zerion Agent)</div>
+          <TruthRow
+            label="Execution transaction"
+            value={
+              typeof pp.zerion_tx_hash === "string" && pp.zerion_tx_hash.trim().length >= 32
+                ? truthScalar(pp.zerion_tx_hash)
+                : "No execution tx yet."
+            }
+          />
+          <TruthRow
+            label="Execution explorer"
+            value={
+              executionExplorerHref ? (
+                <a className="underline" href={executionExplorerHref} target="_blank" rel="noreferrer">
+                  View execution on Solana Explorer →
+                </a>
+              ) : (
+                truthScalar("—")
+              )
+            }
+          />
+          <p className="text-[11px] text-muted-foreground mb-2">{TX_NOTE}</p>
+          <div className="text-xs text-muted-foreground mb-1">Proof anchor (AProof)</div>
+          <TruthRow
+            label="Proof anchor"
+            value={
+              typeof pp.anchor_tx_hash === "string" && pp.anchor_tx_hash.trim().length >= 32
+                ? truthScalar(pp.anchor_tx_hash)
+                : "No proof anchor yet."
+            }
+          />
+          <TruthRow
+            label="Anchor explorer"
+            value={
+              summaryExplorerHref ? (
+                <a className="underline" href={summaryExplorerHref} target="_blank" rel="noreferrer">
+                  View anchor on Solana Explorer →
+                </a>
+              ) : (
+                truthScalar("—")
+              )
+            }
+          />
+          <p className="text-[11px] text-muted-foreground mb-2">{ANCHOR_NOTE}</p>
+          <TruthRow label="operational.execution_status" value={truthScalar(pp.operational_execution_status ?? null)} />
+          <TruthRow label="operational.runtime_error" value={truthScalar(pp.operational_runtime_error ?? null)} />
           <TruthRow label="anchor_batch_id" value={truthScalar(pp.anchor_batch_id)} />
           <TruthRow label="anchor_status" value={truthScalar(pp.anchor_status)} />
           <div className="pt-2">
@@ -439,7 +498,7 @@ function SummarySection({ pp }: { pp: ProductProof | undefined }) {
             {verificationStatus === "error" ? <TruthRow label="result" value="Verification error" /> : null}
             {summaryExplorerHref ? (
               <TruthRow
-                label="explorer_url"
+                label="Anchor proof explorer (verification)"
                 value={
                   <a className="underline" href={summaryExplorerHref} target="_blank" rel="noreferrer">
                     View on Solana Explorer →
@@ -475,11 +534,16 @@ function SevenAnglesSection({
     <TruthSection title="B. Seven angles">
       <div className="space-y-4">
         {angleSlots.map((slot) => {
+          const explanation = getAngleExplanation(slot.angle);
           const a = slot.data;
           if (!a) {
             return (
-              <div key={slot.angle} className="p-3 rounded-lg border border-border bg-background/50">
-                <div className="text-xs font-mono mb-1">{slot.angle}</div>
+              <div key={slot.angle} className="p-3 rounded-lg border border-border bg-background/50 space-y-2">
+                <div className="text-sm font-medium text-foreground">
+                  {explanation?.title ?? slot.angle}
+                </div>
+                <div className="text-[11px] font-mono text-muted-foreground">{slot.angle}</div>
+                <AngleJudgeNarrative angleKey={slot.angle} />
                 <div className="text-sm text-muted-foreground">No data</div>
               </div>
             );
@@ -490,8 +554,11 @@ function SevenAnglesSection({
           const baseUx = baselineUxState(a);
           return (
             <div key={slot.angle} className="p-3 rounded-lg border border-border bg-background/50 space-y-2">
+              <div className="text-sm font-medium text-foreground">
+                {explanation?.title ?? a.angle}
+              </div>
               <div className="flex flex-wrap items-center gap-2">
-                <div className="text-xs font-mono font-medium">{a.angle}</div>
+                <div className="text-[11px] font-mono text-muted-foreground">{a.angle}</div>
                 <Badge variant="outline" className="text-[10px] font-normal">
                   {a.status}
                 </Badge>
@@ -499,6 +566,10 @@ function SevenAnglesSection({
                   baseline: {baseUx}
                 </Badge>
               </div>
+              <AngleJudgeNarrative angleKey={slot.angle} />
+              <TruthRow label="expected_summary" value={truthScalar(a.expected_summary)} />
+              <TruthRow label="actual_summary" value={truthScalar(a.actual_summary)} />
+              <TruthRow label="baseline_summary" value={truthScalar(a.baseline_summary)} />
               <div className="text-xs text-muted-foreground space-y-1">
                 <div>
                   <span className="font-medium text-foreground">Why: </span>

@@ -65,7 +65,7 @@ export function ProofsTraceability({
       <div className="space-y-4">
         {!demoMode ? <IntegrationStatusStrip s={intQ.data} loading={intQ.isLoading} /> : null}
         <div className="text-sm text-muted-foreground p-4 border border-border rounded-xl leading-relaxed">
-          No lineage available yet. Ingest versioned events on a shared lineage, or run &quot;Run Version Update&quot; in
+          No lineage available yet. Ingest versioned events on a shared lineage, or run &quot;Execution Continuity&quot; in
           Demo controls.
         </div>
       </div>

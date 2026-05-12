@@ -2,7 +2,7 @@
 
 Operational checklist for the **APROOF** backend (`APROOF/`). Commands and expectations only.
 
-**Frontend proof dashboard:** from `frontend/`, run `npm run dev` and open **`http://localhost:5173/app/proofs`**. The API on port 3000 does not serve the SPA ([INTEGRATION.md](./INTEGRATION.md)).
+**Frontend proof dashboard:** from `frontend/`, run `npm run dev` and open **`http://localhost:5273/app/proofs`**. The API on port 3040 does not serve the SPA ([INTEGRATION.md](./INTEGRATION.md)).
 
 ## Commands reference
 
@@ -28,7 +28,7 @@ Operational checklist for the **APROOF** backend (`APROOF/`). Commands and expec
 |----------|---------|
 | `APROOF_DB_MODE=pglite` | Embedded DB (required if `DATABASE_URL` unset). |
 | `APROOF_COOKIE_SECURE=0` | Session cookie on plain HTTP. |
-| `PORT` or `APROOF_PORT` | Listen port (default **3000**; `dev:live` uses **3101**). |
+| `PORT` or `APROOF_PORT` | Listen port (default **3040**; `dev:live` uses **3101**). |
 | `PGLITE_DATA_DIR` | Data directory for on-disk PGlite. On **Windows**, if the repo lives under **OneDrive**, prefer a path under `%TEMP%` (e.g. `%TEMP%\aproof-pglite-dev`)—the default `APROOF/data/pglite` may fail WASM init. |
 | `APROOF_PGLITE_OPEN_RETRIES` | Retries for transient PGlite init (default **4**). |
 | `APROOF_LIVE_PGLITE_DATA_DIR` | Override PGlite dir for `dev:live` / `test:live` / `scripts/live-ps1`. If unset and the repo path contains `OneDrive`, scripts default to `%TEMP%\aproof-live-test-run-fresh`. |
@@ -59,7 +59,7 @@ npm run dev
 Confirm log line shows listen port. Check:
 
 ```bash
-curl -s http://127.0.0.1:3000/health
+curl -s http://127.0.0.1:3040/health
 ```
 
 Expect JSON with `"status":"ok"` (or equivalent `ok` field per `/health` handler).
@@ -74,7 +74,7 @@ npm run stress:api
 Optional tuning:
 
 ```bash
-set STRESS_BASE_URL=http://127.0.0.1:3000
+set STRESS_BASE_URL=http://127.0.0.1:3040
 set STRESS_ROUNDS=25
 set STRESS_CONCURRENCY=15
 npm run stress:api

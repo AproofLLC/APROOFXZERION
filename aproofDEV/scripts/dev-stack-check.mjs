@@ -31,11 +31,11 @@ async function main() {
     console.error("\n[dev:check] FAILED");
     if (!r1.ok) {
       console.error(
-        "  → Backend: start the API (cd APROOF && npm run dev; default :3000, or set PORT/APROOF_PORT), or npm run dev:stack from repo root.",
+        "  → Backend: start the API (cd APROOF && npm run dev; default :3040, or set PORT/APROOF_PORT), or npm run dev:stack from repo root.",
       );
     }
     if (!r2.ok) {
-      console.error("  → Frontend: start Vite on :5173 (cd frontend && npm run dev), or npm run dev:stack.");
+      console.error("  → Frontend: start Vite on :5273 (cd frontend && npm run dev), or npm run dev:stack.");
     }
     if (r1.ok && r2.ok && !r3.ok) {
       console.error(

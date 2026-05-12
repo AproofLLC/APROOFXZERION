@@ -1,6 +1,6 @@
 param(
   [string]$DbDir = "",
-  [int]$Port = 3000,
+  [int]$Port = 3040,
   [switch]$ResetDb
 )
 

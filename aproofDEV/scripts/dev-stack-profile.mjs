@@ -17,6 +17,7 @@ function run(command, args, options = {}) {
 async function main() {
   const profile = (process.argv[2] ?? "devnet").trim().toLowerCase();
   const skipStop = process.argv.includes("--skip-stop");
+  const skipDevnetSmoke = process.argv.includes("--skip-devnet-smoke");
 
   if (profile !== "devnet") {
     console.error("[dev:stack:profile] Invalid profile. This repo enforces: devnet");
@@ -36,11 +37,20 @@ async function main() {
   env.SOLANA_CLUSTER = "devnet";
   env.APROOF_REQUIRE_DEVNET_FOR_DEMO = "1";
   console.log("[dev:stack:profile] Starting devnet-secure profile (ANCHOR_MODE=solana-devnet).");
-  console.log("[dev:stack:profile] Running Devnet preflight smoke before stack startup...");
-  const smoke = await run("npm", ["run", "anchor:devnet:smoke", "--prefix", "APROOF"], { env });
-  if (smoke !== 0) {
-    console.error("[dev:stack:profile] Devnet preflight failed. Stack not started.");
-    process.exit(smoke);
+  if (skipDevnetSmoke) {
+    console.warn(
+      "[dev:stack:profile] Skipping Devnet preflight (--skip-devnet-smoke). Solana RPC may still be used at runtime.",
+    );
+  } else {
+    console.log("[dev:stack:profile] Running Devnet preflight smoke before stack startup...");
+    const smoke = await run("npm", ["run", "anchor:devnet:smoke", "--prefix", "APROOF"], { env });
+    if (smoke !== 0) {
+      console.error("[dev:stack:profile] Devnet preflight failed. Stack not started.");
+      console.error(
+        "[dev:stack:profile] Hint: if public RPC returns 429, set SOLANA_RPC_URL to your provider or pass --skip-devnet-smoke.",
+      );
+      process.exit(smoke);
+    }
   }
 
   const started = await run("node", ["scripts/dev-stack-supervised.mjs"], { env });

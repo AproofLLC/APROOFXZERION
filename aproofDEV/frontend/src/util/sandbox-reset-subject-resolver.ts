@@ -26,8 +26,8 @@ export function resolveSubjectIdAfterSandboxMutation(
         ? o.primary_subject_id
         : null;
     if (primary) return primary;
-    const modelFirst = byRailBody?.model ?? byRailStored?.model;
-    if (typeof modelFirst === "string" && modelFirst.length > 0) return modelFirst;
+    const agentFirst = byRailBody?.agent ?? byRailStored?.agent;
+    if (typeof agentFirst === "string" && agentFirst.length > 0) return agentFirst;
     return ctx.priorSubjectId;
   }
 

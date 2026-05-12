@@ -4,6 +4,7 @@
  */
 
 import type { RailType } from "../protocol/angle-applicability.js";
+import { ZERION_ADAPTER_RUNTIME_ERROR } from "../zerion/zerion-execution-adapter.js";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -277,4 +278,296 @@ export function demoVersionBumpSecondPayloadForRail(rail: RailType, overrides: J
         ...overrides,
       });
   }
+}
+
+/** Policy tags required for Zerion Agent sandbox baselines (`policy_integrity_v1.required_tags`). */
+export const ZERION_AGENT_DEMO_POLICY_TAGS = [
+  "allow_read",
+  "chain_solana_devnet",
+  "scoped_policy_pass",
+  "no_god_mode",
+  "assets_approved",
+] as const;
+
+export function readZerionMaxSpendUsdFromEnv(): number {
+  const raw = process.env.ZERION_MAX_SPEND_USD;
+  const n = raw != null && raw.trim() !== "" ? Number(raw) : 5;
+  return Number.isFinite(n) && n >= 0 ? n : 5;
+}
+
+export function readZerionApprovedAssetsFromEnv(): string[] {
+  const raw = process.env.ZERION_APPROVED_ASSETS ?? "SOL,USDC";
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function readZerionAllowedChainFromEnv(): string {
+  return (process.env.ZERION_ALLOWED_CHAIN ?? "solana-devnet").trim() || "solana-devnet";
+}
+
+const ZERION_ARCHITECTURE =
+  "Zerion Agent uses the forked Zerion CLI for real onchain execution while AProof evaluates every proposed and completed action through scoped policies, deterministic proof generation, failure localization, and Solana devnet anchoring.";
+
+/**
+ * Zerion Agent demo: agent rail payload with scoped-policy, CLI/API, and devnet execution metadata.
+ */
+export function cleanZerionAgentDemoPayload(overrides: JsonObject = {}): JsonObject {
+  const maxSpend = readZerionMaxSpendUsdFromEnv();
+  const assets = readZerionApprovedAssetsFromEnv();
+  const chain = readZerionAllowedChainFromEnv();
+  const integrationReady = false;
+  const agentWallet = process.env.ZERION_AGENT_WALLET_ADDRESS?.trim() ?? "";
+  return cleanAgentPolicyCheckedPayload({
+    event_type: "agent_execution_completed",
+    host: "zerion-agent-demo",
+    record_id: "zerion-agent-record",
+    track_context: "Zerion CLI autonomous onchain agent",
+    architecture: ZERION_ARCHITECTURE,
+    policy: {
+      tags: [...ZERION_AGENT_DEMO_POLICY_TAGS],
+      version: "v1",
+      policy_expiry_window_hours: 24,
+      policy_result: "approved",
+    },
+    zerion: {
+      cli_fork: "zerion-cli-fork",
+      api_routing: true,
+      allowed_chain: chain,
+      chain,
+      action: "transfer_or_swap",
+      max_spend_usd: maxSpend,
+      amount_usd: 1,
+      approved_assets: assets,
+      policy_expiry_window_hours: 24,
+      god_mode: false,
+      scoped_policy_pass: true,
+      execution_requires_policy_pass: true,
+      integration_ready: integrationReady,
+      execution_simulated: false,
+      wallet_address: agentWallet,
+      aproof_event_ingested: true,
+    },
+    cross_system: {
+      observed_systems: ["zerion_cli_fork", "zerion_api", "solana_devnet", "aproof_ingest"],
+    },
+    correlation_id: "corr-zerion-agent-demo",
+    ...overrides,
+  });
+}
+
+/**
+ * Blocked / failed execution path: operational_integrity violated with a deterministic `runtime_error` code
+ * (surfaced as `reason_code` when it matches `OPERATIONAL_ZERION_DETAIL_REASON_CODES`).
+ */
+export function zerionAgentExecutionBlockedPayload(
+  reasonCode: string,
+  integrationReady: boolean,
+  overrides: JsonObject = {},
+): JsonObject {
+  const { zerion: zerionOverride, ...restOverrides } = overrides;
+  const zerionPatch =
+    zerionOverride && typeof zerionOverride === "object" && !Array.isArray(zerionOverride)
+      ? (zerionOverride as JsonObject)
+      : {};
+  const maxSpend = readZerionMaxSpendUsdFromEnv();
+  const assets = readZerionApprovedAssetsFromEnv();
+  const chain = readZerionAllowedChainFromEnv();
+  const cliFailureCodes = new Set<string>([
+    ZERION_ADAPTER_RUNTIME_ERROR.CLI_EXECUTION_FAILED,
+    ZERION_ADAPTER_RUNTIME_ERROR.TX_HASH_MISSING,
+    ZERION_ADAPTER_RUNTIME_ERROR.CLI_TIMEOUT,
+    ZERION_ADAPTER_RUNTIME_ERROR.CLI_INVALID_OUTPUT,
+    ZERION_ADAPTER_RUNTIME_ERROR.CLI_PATH_INVALID,
+    "ZERION_CLI_TX_HASH_MISSING",
+    "ZERION_TX_HASH_MISSING",
+    "ZERION_CLI_SPAWN_FAILED",
+  ]);
+  const cliInvoked = cliFailureCodes.has(reasonCode);
+  const executionAttempted = cliInvoked;
+  const scopedPolicyPass = !String(reasonCode).startsWith("POLICY_");
+  const policyResult = String(reasonCode).startsWith("POLICY_") ? "denied" : "approved";
+  const agentWallet = process.env.ZERION_AGENT_WALLET_ADDRESS?.trim() ?? "";
+  return cleanAgentPolicyCheckedPayload({
+    event_type: "agent_execution_completed",
+    host: "zerion-agent-demo",
+    record_id: "zerion-agent-record",
+    track_context: "Zerion CLI autonomous onchain agent",
+    architecture: ZERION_ARCHITECTURE,
+    policy: {
+      tags: [...ZERION_AGENT_DEMO_POLICY_TAGS],
+      version: "v1",
+      policy_expiry_window_hours: 24,
+      policy_result: policyResult,
+    },
+    operational: {
+      execution_status: "failure",
+      latency_ms: 1,
+      runtime_error: reasonCode,
+    },
+    zerion: {
+      cli_fork: "zerion-cli-fork",
+      api_routing: true,
+      allowed_chain: chain,
+      chain,
+      action: "transfer_or_swap",
+      max_spend_usd: maxSpend,
+      amount_usd: 1,
+      approved_assets: assets,
+      policy_expiry_window_hours: 24,
+      god_mode: false,
+      scoped_policy_pass: scopedPolicyPass,
+      execution_requires_policy_pass: true,
+      integration_ready: integrationReady,
+      execution_simulated: false,
+      execution_attempted: executionAttempted,
+      cli_invoked: cliInvoked,
+      execution_source: cliInvoked ? "zerion_cli" : "none",
+      proposed_spend_usd: 1,
+      proposed_asset: "SOL",
+      wallet_address: agentWallet,
+      aproof_event_ingested: true,
+      ...zerionPatch,
+    },
+    cross_system: {
+      observed_systems: [
+        "zerion_cli_fork",
+        "zerion_api",
+        "solana_devnet",
+        "aproof_ingest",
+        "aproof_policy_gate",
+      ],
+    },
+    correlation_id: "corr-zerion-agent-blocked",
+    ...restOverrides,
+  });
+}
+
+/** Scenario 2: intentional scoped policy violation — no Zerion CLI invocation. */
+export function zerionAgentDemoPolicyFailurePayload(overrides: JsonObject = {}): JsonObject {
+  const maxSpend = readZerionMaxSpendUsdFromEnv();
+  return zerionAgentExecutionBlockedPayload("POLICY_SPEND_LIMIT_EXCEEDED", false, {
+    zerion: {
+      proposed_spend_usd: maxSpend + 1,
+      proposed_asset: "SOL",
+      cli_invoked: false,
+      execution_attempted: false,
+      execution_source: "none",
+      tx_hash: null,
+    },
+    ...overrides,
+  });
+}
+
+/** After real CLI execution: include on-chain signature and wallet metadata. */
+export function zerionAgentPostCliSuccessPayload(params: {
+  tx_hash: string;
+  wallet_address: string;
+  recipient_address?: string | null;
+  chain: string;
+  amount_usd: number;
+  asset: string;
+  integration_ready: boolean;
+  correlation_id?: string;
+  policy_version?: string;
+  policy_bundle_version?: string | null;
+  execution_source?: string;
+  execution_simulated?: boolean;
+  /** Merged into `zerion` without dropping tx_hash / execution metadata. */
+  zerion_extra?: JsonObject;
+  overrides?: JsonObject;
+}): JsonObject {
+  const o = params.overrides ?? {};
+  const execSource =
+    typeof params.execution_source === "string" && params.execution_source.trim() !== ""
+      ? params.execution_source.trim()
+      : "zerion_cli";
+  const zerionBase: JsonObject = {
+    cli_fork: "zerion-cli-fork",
+    api_routing: true,
+    allowed_chain: params.chain,
+    chain: params.chain,
+    action: "transfer_or_swap",
+    max_spend_usd: readZerionMaxSpendUsdFromEnv(),
+    approved_assets: readZerionApprovedAssetsFromEnv(),
+    tx_hash: params.tx_hash,
+    wallet_address: params.wallet_address,
+    recipient_address: params.recipient_address ?? undefined,
+    amount_usd: params.amount_usd,
+    asset: params.asset,
+    execution_source: execSource,
+    cli_invoked: true,
+    execution_attempted: true,
+    integration_ready: params.integration_ready,
+    execution_simulated: params.execution_simulated === true,
+    scoped_policy_pass: true,
+    god_mode: false,
+    execution_requires_policy_pass: true,
+    policy_bundle_version: params.policy_bundle_version ?? undefined,
+    aproof_event_ingested: true,
+    ...(params.zerion_extra ?? {}),
+  };
+  return cleanAgentPolicyCheckedPayload({
+    event_type: "agent_execution_completed",
+    host: "zerion-agent-demo",
+    record_id: "zerion-agent-record",
+    track_context: "Zerion CLI autonomous onchain agent",
+    architecture: ZERION_ARCHITECTURE,
+    policy: {
+      tags: [...ZERION_AGENT_DEMO_POLICY_TAGS],
+      version: params.policy_version ?? "v1",
+      policy_expiry_window_hours: 24,
+      policy_result: "approved",
+    },
+    operational: { execution_status: "success", latency_ms: 120, runtime_error: null },
+    zerion: zerionBase,
+    cross_system: {
+      observed_systems: ["zerion_cli_fork", "zerion_api", "solana_devnet", "aproof_ingest"],
+    },
+    correlation_id: params.correlation_id ?? "corr-zerion-agent-cli",
+    ...o,
+  });
+}
+
+/** Second event for Zerion Agent lineage version bump (same digest; context/policy bundle advances). */
+export function zerionAgentDemoVersionBumpSecondPayload(overrides: JsonObject = {}): JsonObject {
+  const chain = readZerionAllowedChainFromEnv();
+  const agentWallet = process.env.ZERION_AGENT_WALLET_ADDRESS?.trim() ?? "";
+  return cleanZerionAgentDemoPayload({
+    agent: {
+      allowed_actions: ["read", "search", "verify"],
+      step_trace: ["plan", "policy_gate", "zerion_cli", "verify"],
+      execution_state: "verified",
+      decision_trace: ["branch-a", "branch-confirm"],
+    },
+    policy: {
+      tags: [...ZERION_AGENT_DEMO_POLICY_TAGS],
+      version: "v2",
+      policy_expiry_window_hours: 24,
+      policy_result: "approved",
+    },
+    zerion: {
+      cli_fork: "zerion-cli-fork",
+      api_routing: true,
+      allowed_chain: chain,
+      chain,
+      action: "transfer_or_swap",
+      wallet_address: agentWallet,
+      max_spend_usd: readZerionMaxSpendUsdFromEnv(),
+      amount_usd: 1,
+      approved_assets: readZerionApprovedAssetsFromEnv(),
+      policy_expiry_window_hours: 48,
+      god_mode: false,
+      scoped_policy_pass: true,
+      execution_requires_policy_pass: true,
+      integration_ready: false,
+      execution_simulated: false,
+      aproof_event_ingested: true,
+      policy_bundle_version: "2026-05-09b",
+    },
+    deterministic: { observed_digest: "agent-digest-v1" },
+    correlation_id: "corr-zerion-agent-demo-v2",
+    ...overrides,
+  });
 }

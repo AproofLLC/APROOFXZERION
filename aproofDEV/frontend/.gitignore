@@ -3,11 +3,25 @@ dist/
 coverage/
 tmp/
 .vite/
+*.pem
+*.key
+*keypair*.json
+anchor-devnet.json
+zerion-agent-keypair.json
+solana-devnet-keypair.json
 *.log
 # Local env — untracked overlays are normal; do not commit real secrets.
 .env
 .env.*
 !.env.example
+!.env.demo.example
+
+# Local key material / caches (frontend tooling should not write keypairs here; ignore defensively).
+.local/
+data/
+
+*.sqlite
+*.db
 
 .DS_Store
 Thumbs.db

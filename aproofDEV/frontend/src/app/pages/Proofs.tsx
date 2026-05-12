@@ -32,13 +32,18 @@ import { ProofsProofs } from "../components/proofs/ProofsProofs";
 import { ProofsSettings } from "../components/proofs/ProofsSettings";
 import { ProofsTraceability } from "../components/proofs/ProofsTraceability";
 import { ProofsUserLogs } from "../components/proofs/ProofsUserLogs";
+import { ZerionAgentPanel } from "../components/proofs/ZerionAgentPanel";
 import {
   USER_CREATABLE_SUBJECT_TYPES,
   userFacingSubjectType,
   type UserCreatableSubjectType,
 } from "../../constants/subject-type-display";
 import { formatDemoLastActionLine } from "../../util/demo-last-action";
-import { getDemoOverviewOutcomeCopy, outcomeShortLabel } from "../../util/demo-proof-outcome";
+import {
+  getDemoOverviewOutcomeCopy,
+  getOperationalOnlySixOfSevenCopy,
+  outcomeShortLabel,
+} from "../../util/demo-proof-outcome";
 import { subjectPrimaryLabel } from "../../util/subject-display";
 import { truthNotOnResponse, truthScalar } from "../components/proofs/truth-display";
 import { Button } from "../components/ui/button";
@@ -66,7 +71,7 @@ export function Proofs() {
     setSubjectId((prev) => {
       if (prev && items.some((s) => s.subject_id === prev)) return prev;
       if (preferred && items.some((s) => s.subject_id === preferred)) return preferred;
-      if (railMap?.model && items.some((s) => s.subject_id === railMap.model)) return railMap.model;
+      if (railMap?.agent && items.some((s) => s.subject_id === railMap.agent)) return railMap.agent;
       return items[0]!.subject_id;
     });
   }, [subjectsQ.data?.items]);
@@ -222,9 +227,9 @@ function AccessGateway() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-6 py-24 bg-background">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-medium mb-2">Try Aproof instantly</h1>
+          <h1 className="text-2xl font-medium mb-2">APROOF X ZERION</h1>
           <p className="text-sm text-muted-foreground">
-            Explore a real governed workspace—demo sandbox or your own organization.
+            Explore the Zerion Agent devnet demo (scoped policy + proofs) or sign in to your own workspace.
           </p>
         </div>
 
@@ -455,6 +460,7 @@ function ProductShell({
 
   const sidebarItemsProd = [
     { id: "overview", label: "Overview" },
+    { id: "zerion-agent", label: "Zerion Agent" },
     { id: "proofs", label: "Proofs" },
     { id: "events", label: "Events" },
     { id: "traceability", label: "Lineages" },
@@ -466,6 +472,7 @@ function ProductShell({
 
   const sidebarItemsDemo = [
     { id: "overview", label: "Overview" },
+    { id: "zerion-agent", label: "Zerion Agent" },
     { id: "angles", label: "Baselines" },
     { id: "proofs", label: "Proofs" },
     { id: "events", label: "Events" },
@@ -512,11 +519,25 @@ function ProductShell({
   });
 
   const stripSnapshotStatus = demoOutcomePin?.status ?? snap?.status;
+  const latestZerionTxHash = overviewQ.data?.latest_proof_snapshot?.zerion_tx_hash ?? null;
+  const agentAuthorizedIncomplete =
+    isDemo &&
+    demoRail === "agent" &&
+    stripSnapshotStatus === "conformant" &&
+    !(typeof latestZerionTxHash === "string" && latestZerionTxHash.trim().length >= 32);
+  const demoOperationalReason =
+    overviewQ.data?.active_failures_list?.find((f) => f.angle === "operational_integrity")?.reason_code ?? null;
+  const latestAnchorSigRaw = overviewQ.data?.status_strip?.latest_anchor_metadata?.tx_signature;
+  const latestAnchorSig =
+    typeof latestAnchorSigRaw === "string" && latestAnchorSigRaw.trim().length >= 32 ? latestAnchorSigRaw.trim() : null;
+  const demoSixOfSevenLine = getOperationalOnlySixOfSevenCopy(overviewQ.data?.angles_summary);
   const latestProofStatusLabel = overviewQ.isError
     ? truthNotOnResponse()
-    : stripSnapshotStatus != null && stripSnapshotStatus !== ""
-      ? outcomeShortLabel(stripSnapshotStatus)
-      : "not evaluated";
+    : agentAuthorizedIncomplete
+      ? "incomplete"
+      : stripSnapshotStatus != null && stripSnapshotStatus !== ""
+        ? outcomeShortLabel(stripSnapshotStatus)
+        : "not evaluated";
 
   const createRealWorkspace = () => {
     signOut.mutate(undefined, {
@@ -536,7 +557,9 @@ function ProductShell({
             <Badge variant="secondary" className="font-normal shrink-0">
               Demo Mode
             </Badge>
-            <span className="text-muted-foreground">Sandbox · testnet · guided experience</span>
+            <span className="text-muted-foreground">
+              Zerion Agent · Solana devnet · AProof proof layer — guided experience
+            </span>
           </div>
           <button
             type="button"
@@ -652,7 +675,14 @@ function ProductShell({
                   )}
                   {isDemo && !overviewQ.isError && stripSnapshotStatus ? (
                     <p className="text-[10px] text-muted-foreground mt-2 max-w-[260px] ml-auto text-right leading-snug">
-                      {getDemoOverviewOutcomeCopy(demoRail, stripSnapshotStatus)}
+                      {getDemoOverviewOutcomeCopy(
+                        demoRail,
+                        stripSnapshotStatus,
+                        demoOperationalReason,
+                        latestZerionTxHash,
+                        latestAnchorSig,
+                      )}
+                      {demoSixOfSevenLine ? ` ${demoSixOfSevenLine}` : ""}
                     </p>
                   ) : null}
                 </div>
@@ -721,6 +751,7 @@ function ProductShell({
                 onOpenUserLogsTab={() => setActiveTab("user-logs")}
               />
             )}
+            {activeTab === "zerion-agent" && <ZerionAgentPanel subjectId={subjectId} />}
             {activeTab === "events" && <ProofsEvents subjectId={subjectId} />}
             {activeTab === "traceability" && (
               <ProofsTraceability
