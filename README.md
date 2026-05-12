@@ -1,82 +1,28 @@
-# AProof
+# AProof × Zerion
 
-**AProof** is a deterministic proof engine for system events with verifiable integrity, provenance, and on-chain anchoring.
+**Zerion executes. AProof governs, verifies, and anchors.**
 
-The active monorepo—backend, frontend, shared scripts, and product docs—lives under **[`aproofDEV/`](./aproofDEV)**. Clone or open this repository, then treat **`aproofDEV/`** as the working project root for installs and NPM scripts.
+AProof wraps autonomous on-chain execution with **deterministic governance**: scoped policy, **seven-angle proof verification**, failure localization, and **Solana devnet anchoring**. Execution transactions and proof-anchor transactions are intentionally **separate**—auditable on explorers in different roles.
 
-## Project Structure
+## Demo scenarios
 
-- **`aproofDEV/APROOF`** → backend proof engine ([open folder](./aproofDEV/APROOF))
-- **`aproofDEV/frontend`** → frontend dashboard ([open folder](./aproofDEV/frontend))
+1. **Authorized Execution** — Policy passes → real devnet execution transaction → proof digest → anchor transaction.  
+2. **Blocked Execution** — Policy violation → executor **not** invoked → **no** spend → deterministic failure proof.  
+3. **Execution Continuity** — Same sender/recipient lineage → **new** `tx_hash`, **`event_version`** increments → new proof and anchor.
 
-Supporting layout:
+## Monorepo layout
 
 | Path | Role |
 |------|------|
-| [**`aproofDEV/APROOF`**](./aproofDEV/APROOF) | Backend: Fastify API, proof pipeline, ingest, PGlite/Postgres, tests |
-| [**`aproofDEV/frontend`**](./aproofDEV/frontend) | Frontend: Vite + React dashboard (proofs, sandbox, session auth) |
-| [`aproofDEV/docs`](./aproofDEV/docs) | Workspace docs and archived reports |
-| [`aproofDEV/scripts`](./aproofDEV/scripts) | Shared tooling (`dev:stack`, `verify`, PowerShell harnesses, etc.) |
+| **`aproofDEV/APROOF`** | Backend: proof engine, Zerion execution adapter, anchoring, API |
+| **`aproofDEV/frontend`** | Vite + React app: proofs dashboard, Zerion Agent UI |
+| **`aproofDEV/docs`** | Quickstart, demo script, workspace documentation |
+| **`aproofDEV/scripts`** | Dev stack orchestration, `verify`, repo safety checks, harnesses |
 
-Backend-focused docs also live under [`aproofDEV/APROOF/docs`](./aproofDEV/APROOF/docs).
+## Full documentation and setup
 
-## Quick start
+Use **`aproofDEV/`** as the working directory for **`npm install`**, **`npm run verify`**, **`npm run dev:stack`**, Solana devnet env setup, and the complete architecture guide:
 
-**Prerequisites:** Node.js **20+** (see [`aproofDEV/package.json`](./aproofDEV/package.json)).
+→ **[`aproofDEV/README.md`](aproofDEV/README.md)**
 
-### Backend (API)
-
-Default listen port: **`3000`**.
-
-```bash
-cd aproofDEV/APROOF
-npm install
-npm run dev
-```
-
-Local DB defaults to **PGlite** (file-backed under `aproofDEV/APROOF/data/`). Copy [`aproofDEV/APROOF/.env.example`](./aproofDEV/APROOF/.env.example) to `aproofDEV/APROOF/.env` for overrides (never commit secrets).
-
-### Frontend (dashboard)
-
-Dev server (**Vite**): **`5173`** (strict; use only this origin in the browser so the proxy works).
-
-```bash
-cd aproofDEV/frontend
-npm install
-npm run dev
-```
-
-Open **`http://127.0.0.1:5173`** (e.g. **`/app/proofs`**). Do not load the SPA from the raw API URL—use the Vite dev server so API calls proxy correctly.
-
-### Full interactive stack (API + Vite + Devnet preflight)
-
-From **`aproofDEV/`** after `npm install`:
-
-```bash
-cd aproofDEV
-npm install
-npm run stop:stack   # optional: free ports
-npm run dev:stack
-```
-
-This starts the API (typically **`:3000`**) and the UI on **`:5173`**. After startup, run `npm run dev:check` from `aproofDEV/` for health and proxy checks. See **`aproofDEV/README.md`** for the detailed manual workflow (`dev:stack`, Devnet profile, troubleshooting).
-
-### Verification & CI
-
-One-shot verification from **`aproofDEV/`**:
-
-```bash
-cd aproofDEV
-npm install
-npm run verify
-```
-
-Workflow file: **[`.github/workflows/ci.yml`](./aproofDEV/.github/workflows/ci.yml)** (triggered from paths under **`aproofDEV/`** as configured).
-
-## More documentation
-
-For sandbox behavior, Solana Devnet anchoring, release bundles, deployment, and deep-dive guides, read the workspace README:
-
-- **[`aproofDEV/README.md`](./aproofDEV/README.md)** — full developer guide (paths inside that document are relative to `aproofDEV/`)
-- [`aproofDEV/docs/README.md`](./aproofDEV/docs/README.md)
-- [`aproofDEV/docs/DEPLOYMENT.md`](./aproofDEV/docs/DEPLOYMENT.md)
+*(Node.js 20+. Public demos target Solana devnet. Do not commit `.env`, keypairs, or anything under `.local/`.)*
